@@ -2,6 +2,11 @@
 name = "rmin"
 version = "0.1.0"
 edition = "2021"
+description = "A minimal Rust lib for writting R extensions"
+authors = ["Neutron3529 <qweytr1@main.ustc.edu.cn>"]
+license-file = "LICENSE"
+repository = "https://github.com/Neutron3529/rmin"
+
 
 [features]
 std = []
