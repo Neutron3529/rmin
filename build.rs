@@ -138,10 +138,7 @@ fn get_r_library(r_home: &Path) -> PathBuf {
 fn probe_r_paths() -> io::Result<InstallationPaths> {
     let r_home = get_r_home()?;
     let library = get_r_library(&r_home);
-    Ok(InstallationPaths {
-        r_home,
-        library,
-    })
+    Ok(InstallationPaths { r_home, library })
 }
 
 fn main() {
@@ -157,6 +154,7 @@ fn main() {
     };
     println!("cargo:rustc-env=R_HOME={}", r_paths.r_home.display());
     println!("cargo:r_home={}", r_paths.r_home.display()); // Becomes DEP_R_R_HOME for clients
+
     // TODO: r_library might not exist in some types of installation that
     // doesn't provide libR, R's shared library; in such a situation, just skip
     // setting `rustc-link-search`. Probably this setting itself is not used at

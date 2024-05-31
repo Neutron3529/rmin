@@ -11,69 +11,62 @@ use core::{ffi::c_void, slice};
 mod libR;
 use libR::{
     R_xlen_t as int, Rf_allocVector, Rf_isInteger, Rf_isLogical, Rf_isReal, Rf_protect,
-    Rf_unprotect_ptr, Rf_xlength, Rprintf, DATAPTR, DATAPTR_RO, INTSXP, LGLSXP, REALSXP, SEXP, SEXPTYPE
+    Rf_unprotect_ptr, Rf_xlength, Rprintf, DATAPTR, DATAPTR_RO, INTSXP, LGLSXP, REALSXP, SEXP,
+    SEXPTYPE,
 };
 #[cfg(not(feature = "std"))]
-syntax_group!{
-    #[lang = "eh_personality"]
+syntax_group! {
+    /// To avoid the following error:
+    /// error: unwinding panics are not supported without std
+    #[lang = "eh_personality"] // to supress the error
     pub extern "C" fn rust_eh_personality() {}
-    macro_rules! println{
-            ($($tt:tt)*) => {
+    /// Print things into R
+    macro_rules! println {
+        ($($tt:tt)*) => {
+            let mut x=alloc::string::String::new();
+            core::fmt::write(&mut x, format_args!($($tt)*)).and_then(|_|core::fmt::write(&mut x, format_args!("\n\0"))).expect("failed to write string");
             #[allow(unused_unsafe)]
-            unsafe{
-                let mut x=alloc::string::String::new();
-                core::fmt::write(&mut x, format_args!($($tt)*)).and_then(|_|core::fmt::write(&mut x, format_args!("\n\0"))).expect("failed to write string");
-                Rprintf(x.as_ptr() as *const core::ffi::c_char);
-            }}
+            unsafe{ Rprintf(x.as_ptr() as *const core::ffi::c_char) }
         }
+    }
     extern crate alloc;
     use libR::{R_chk_calloc, R_chk_free, R_chk_realloc, Rf_error};
+
+    use alloc::alloc::{Layout, GlobalAlloc};
+    pub use alloc::{string::String, vec::Vec};
+
     struct SimpleAllocator();
     #[global_allocator]
     static ALLOCATOR: SimpleAllocator = SimpleAllocator();
     unsafe impl Sync for SimpleAllocator {}
-    unsafe impl alloc::alloc::GlobalAlloc for SimpleAllocator {
-        unsafe fn alloc(&self, layout: alloc::alloc::Layout) -> *mut u8 {
+    unsafe impl GlobalAlloc for SimpleAllocator {
+        unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
             unsafe { R_chk_calloc(layout.size().div_euclid(layout.align()), layout.align()) as *mut u8 }
         }
-        unsafe fn alloc_zeroed(&self, layout: alloc::alloc::Layout) -> *mut u8 {
+        unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
             unsafe { R_chk_calloc(layout.size().div_euclid(layout.align()), layout.align()) as *mut u8 }
         }
-        unsafe fn dealloc(&self, ptr: *mut u8, _layout: alloc::alloc::Layout) {
+        unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
             unsafe { R_chk_free(ptr as *mut core::ffi::c_void) }
         }
-        unsafe fn realloc(
-            &self,
-            ptr: *mut u8,
-            _layout: alloc::alloc::Layout,
-            new_size: usize,
-        ) -> *mut u8 {
+        unsafe fn realloc( &self, ptr: *mut u8, _layout: Layout, new_size: usize ) -> *mut u8 {
             unsafe { R_chk_realloc(ptr as *mut core::ffi::c_void, new_size) as *mut u8 }
         }
     }
-    use alloc::string::String;
     #[panic_handler]
     fn panic_handler(info: &core::panic::PanicInfo) -> ! {
-        let mut x = String::new();
-
-        if let Some(s) = info.payload().downcast_ref::<&str>() {
-            println!("panic occurred: {s:?}");
-        } else {
-            println!("panic occurred");
+        // print errors.
+        // adding extra scope to ensure all the dynamic allocated resources are dropped.
+        {
+            if let Some(s) = info.payload().downcast_ref::<&str>() {
+                println!("panic occurred: {s:?}");
+            } else {
+                println!("panic occurred");
+            }
+            info.message().map(|i| {println!("message: {i}");});
+            info.location().map(|i| {println!("at {i:?}");});
         }
-
-        info.message().map(|i| {
-            core::fmt::write(&mut x, *i)
-                .and_then(|_| core::fmt::write(&mut x, format_args!("\n")))
-                .expect("failed to write string")
-        });
-        info.location().map(|i| {
-            core::fmt::write(&mut x, format_args!("{:?}\n\0", i)).expect("failed to write string")
-        });
-        unsafe {
-            Rprintf(x.as_ptr() as *const core::ffi::c_char);
-            Rf_error("the program is paniced\0".as_ptr() as *const core::ffi::c_char)
-        }
+        unsafe { Rf_error("the program is panic!\0".as_ptr() as *const core::ffi::c_char) }
     }
 }
 // May trigger double panic.
@@ -92,7 +85,10 @@ syntax_group!{
 pub struct Owned(SEXP);
 #[repr(transparent)]
 pub struct Protected(Owned);
-pub trait SExt where Self: Sized {
+pub trait SExt
+where
+    Self: Sized,
+{
     fn as_sexp(&self) -> SEXP;
     /// Get the length of a vector.
     #[inline(always)]
@@ -145,9 +141,12 @@ pub trait SExt where Self: Sized {
         unsafe { slice::from_raw_parts(sexp.data() as *const i32, sexp.len()) }
     }
 }
-pub trait MutableSEXP : SExt where Self: Sized {
+pub trait MutableSEXP: SExt
+where
+    Self: Sized,
+{
     /// SAFETY: len should >0, ty should be `REALSXP`, `INTSXP` or `LGLSXP`
-    unsafe fn new_type(len: int, ty:SEXPTYPE)->Self;
+    unsafe fn new_type(len: int, ty: SEXPTYPE) -> Self;
     /// SAFETY:
     /// FFI calls. length should >0 else I have no idea what will happen
     #[inline(always)]
@@ -200,13 +199,13 @@ impl SExt for Protected {
 }
 impl MutableSEXP for Owned {
     #[inline(always)]
-    unsafe fn new_type(len: int, ty:SEXPTYPE) -> Self {
+    unsafe fn new_type(len: int, ty: SEXPTYPE) -> Self {
         unsafe { Self(Rf_allocVector(ty, len)) }
     }
 }
 impl MutableSEXP for Protected {
     #[inline(always)]
-    unsafe fn new_type(len: int, ty:SEXPTYPE) -> Self {
+    unsafe fn new_type(len: int, ty: SEXPTYPE) -> Self {
         unsafe { Self(Owned(Rf_protect(Rf_allocVector(ty, len)))) }
     }
 }
@@ -246,8 +245,8 @@ impl Drop for Protected {
     }
 }
 pub mod prelude {
-    pub use crate::{SExt, MutableSEXP};
-    pub type SEXP=crate::SEXP;
-    pub type Owned=crate::Owned;
-    pub type Protected=crate::Protected;
+    pub use crate::{MutableSEXP, SExt};
+    pub type SEXP = crate::SEXP;
+    pub type Owned = crate::Owned;
+    pub type Protected = crate::Protected;
 }
