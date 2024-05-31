@@ -1,0 +1,11 @@
+[package]
+name = "rmin"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+std = []
+
+[[example]]
+name = "simple"
+crate-type = ["cdylib"]
