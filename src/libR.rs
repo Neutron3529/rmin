@@ -10,11 +10,14 @@ extern "C" {
     pub fn Rf_allocVector(arg1: SEXPTYPE, arg2: R_xlen_t) -> SEXP;
     pub fn Rf_protect(arg1: SEXP) -> SEXP;
     pub fn Rf_unprotect_ptr(arg1: SEXP);
-    pub fn R_chk_calloc(count: usize, size_and_align: usize) -> *mut core::ffi::c_void;
-    pub fn R_chk_realloc(ptr: *mut core::ffi::c_void, new_size: usize) -> *mut core::ffi::c_void;
-    pub fn R_chk_free(ptr: *mut core::ffi::c_void);
-    pub fn Rprintf(arg1: *const core::ffi::c_char, ...);
-    pub fn Rf_error(arg1: *const core::ffi::c_char, ...) -> !;
+    #[cfg(not(feature = "std"))]
+    syntax_group! {
+        pub fn R_chk_calloc(count: usize, size_and_align: usize) -> *mut core::ffi::c_void;
+        pub fn R_chk_realloc(ptr: *mut core::ffi::c_void, new_size: usize) -> *mut core::ffi::c_void;
+        pub fn R_chk_free(ptr: *mut core::ffi::c_void);
+        pub fn Rprintf(arg1: *const core::ffi::c_char, ...);
+        pub fn Rf_error(arg1: *const core::ffi::c_char, ...) -> !;
+    }
     pub fn Rf_xlength(arg1: SEXP) -> R_xlen_t;
     pub fn DATAPTR_RO(x: SEXP) -> *const core::ffi::c_void;
     pub fn DATAPTR(x: SEXP) -> *mut core::ffi::c_void;

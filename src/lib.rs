@@ -1,8 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(internal_features)]
-#![feature(lang_items)]
-#![feature(panic_info_message)]
-
+#![feature(lang_items, panic_info_message, update_panic_count)]
+#[cfg_attr(feature = "std", allow(unused))]
 macro_rules! syntax_group {
     ($($tt:tt)*) => { $($tt)* };
 }
@@ -11,11 +10,15 @@ use core::{ffi::c_void, slice};
 mod libR;
 use libR::{
     R_xlen_t as int, Rf_allocVector, Rf_isInteger, Rf_isLogical, Rf_isReal, Rf_protect,
-    Rf_unprotect_ptr, Rf_xlength, Rprintf, DATAPTR, DATAPTR_RO, INTSXP, LGLSXP, REALSXP, SEXP,
-    SEXPTYPE,
+    Rf_unprotect_ptr, Rf_xlength, DATAPTR, DATAPTR_RO, INTSXP, LGLSXP, REALSXP, SEXP, SEXPTYPE,
 };
 #[cfg(not(feature = "std"))]
 syntax_group! {
+    extern crate alloc;
+
+    use alloc::alloc::{Layout, GlobalAlloc};
+    pub use alloc::{string::String, vec::Vec};
+    use libR::{Rprintf, Rf_error, R_chk_calloc, R_chk_free, R_chk_realloc};
     /// To avoid the following error:
     /// error: unwinding panics are not supported without std
     #[lang = "eh_personality"] // to supress the error
@@ -29,11 +32,6 @@ syntax_group! {
             unsafe{ Rprintf(x.as_ptr() as *const core::ffi::c_char) }
         }
     }
-    extern crate alloc;
-    use libR::{R_chk_calloc, R_chk_free, R_chk_realloc, Rf_error};
-
-    use alloc::alloc::{Layout, GlobalAlloc};
-    pub use alloc::{string::String, vec::Vec};
 
     struct SimpleAllocator();
     #[global_allocator]
@@ -71,16 +69,17 @@ syntax_group! {
 }
 // May trigger double panic.
 // #[cfg(feature="std")]
-// fn panic(info: &core::panic::PanicInfo){
-//     panic_handler(info);
+// syntax_group!{
+//     fn panic(info: &core::panic::PanicInfo){
+//         std::panicking::panic_count::decrease();
+//         panic_handler(info);
+//     }
+//     #[no_mangle]
+//     pub extern fn init()->Owned {
+//         std::panic::set_hook(Box::new(panic));
+//         unsafe {Owned::new_bool(0)}
+//     }
 // }
-// #[cfg(feature="std")]
-// #[no_mangle]
-// pub extern fn init()->Owned {
-//     std::panic::set_hook(Box::new(panic));
-//     unsafe {Owned::new_bool(0)}
-// }
-
 #[repr(transparent)]
 pub struct Owned(SEXP);
 #[repr(transparent)]
