@@ -54,6 +54,7 @@ syntax_group! {
     use alloc::alloc::{GlobalAlloc, Layout};
     pub use alloc::{string::String, vec::Vec};
     use libR::{R_chk_calloc, R_chk_free, R_chk_realloc, Rf_error};
+    /// TODO: writting unwind code to enable unwind feature.
     #[cfg(not(feature = "unwind"))]
     syntax_group! {
         /// To avoid the following error:
@@ -105,32 +106,26 @@ syntax_group! {
             } else {
                 write!(&mut message, "panic occurred:").expect(REASON)
             }
+            if let Some(i) = info.message() {
+                if let Some(s) = info.payload().downcast_ref::<&str>() {
+                    write!(&mut message," {i} ({s})").expect(REASON)
+                } else {
+                    write!(&mut message," {i}").expect(REASON)
+                }
+            }
             if let Some(i) = info.location() {
-                writeln!(
+                write!(
                     &mut message,
-                    "  at {}, line {}, column {}",
+                    "\n  at {}, line {}, column {}.",
                     i.file(),
                          i.line(),
                          i.column(),
                 ).expect(REASON)
-            } else {
-                writeln!(&mut message, "").expect(REASON)
             }
-            if let Some(i) = info.message() {
-                writeln!(
-                    &mut message,
-                    "panic: {} {i}",
-                    if let Some(s) = info.payload().downcast_ref::<&str>() {
-                        s
-                    } else {
-                        ""
-                    },
-                ).expect(REASON)
-            }
-            println!("finalized {message} to ");
+            // println!("finalized {message} to ");
             RStr::from_str(message.as_str())
         };
-        println!("strsxp with len {} and type {}",strsxp.0.len(),unsafe{TYPEOF(strsxp.0)});
+        // println!("strsxp with len {} and type {}",strsxp.0.len(),unsafe{TYPEOF(strsxp.0)});
         unsafe {
             Rf_error(strsxp.0.data() as *const c_char)
         }

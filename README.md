@@ -14,7 +14,7 @@ Further grammar might be added at some cost (mostly cost my spare time.. but som
 
 ## 0.1.0, the beginning
 
-The grammar provided by 0.1.0 is assumed to be the base and might not change unless it do harm to the further development.
+The grammar provided by 0.1.0 might be changed in the future, since they lack compile time checks (for exapmle, writting a `SEXP<f64>` is better than using plain `SEXP` directly.)
 
 In later version, I may adding proc-macro support thus we could write better program.
 

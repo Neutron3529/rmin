@@ -162,6 +162,5 @@ fn main() {
     if let Ok(r_library) = r_paths.library.canonicalize() {
         println!("cargo:rustc-link-search={}", r_library.display());
     }
-    println!("cargo:rustc-link-lib=dylib=R");
     println!("cargo:rerun-if-changed=build.rs");
 }

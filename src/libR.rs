@@ -9,6 +9,7 @@ pub type cetype_t = u32;
 #[allow(non_upper_case_globals)]
 pub const cetype_t_CE_UTF8: u32 = 1;
 // pub type Rboolean = u32;
+#[link(name = "R", kind = "dylib")]
 extern "C" {
     #[doc = "These are the public inlinable functions that are provided in\nRinlinedfuns.h It is *essential* that these do not appear in any\nother header file, with or without the Rf_ prefix."]
     pub fn Rf_allocVector(arg1: SEXPTYPE, arg2: R_xlen_t) -> SEXP;
