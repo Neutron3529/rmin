@@ -1,6 +1,6 @@
 [package]
 name = "rmin"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 description = "A minimal Rust lib for writting R extensions"
 authors = ["Neutron3529 <qweytr1@main.ustc.edu.cn>"]
@@ -9,12 +9,9 @@ repository = "https://github.com/Neutron3529/rmin"
 
 
 [features]
+default=["std"]
 std = []
 
 [[example]]
-name = "add"
-crate-type = ["cdylib"]
-
-[[example]]
-name = "panic"
+name = "compare-rmin"
 crate-type = ["cdylib"]
