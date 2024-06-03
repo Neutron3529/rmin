@@ -7,6 +7,10 @@
 //!
 //! Since it is small enough, you could vendor this crate easily into your CRAN package.
 //!
+//! # Note
+//!
+//! Please switch to [`prelude`] module page for a first glance
+//!
 //! # Usage
 //!
 //! Version 0.1.0 provides a fastest (but ugly) way to achieve about 2x speedup on with functions. They are discarded in 0.2.* since they are really unsafe and may cause memory leak.
@@ -56,54 +60,62 @@
 //! export LOAD="dyn.load('target/release/examples/libcompare_rmin.so');addnp=getNativeSymbolInfo('add_noprotect');addp=getNativeSymbolInfo('add_protect');panic=getNativeSymbolInfo('panic')" ; LC_ALL=C r -e "$LOAD;system.time(sapply(1:100000,function(x)tryCatch(.Call(wrap__panic),error=I)))" 2>/dev/null ; LC_ALL=C r -e "$LOAD;system.time(sapply(1:1000000,function(x).Call(addp,1.,2.)));system.time(sapply(1:1000000,function(x).Call(addp,1.,2.)))"
 //! ```
 #![feature(rustdoc_missing_doc_code_examples, decl_macro, doc_cfg)]
-#![warn(missing_docs, rustdoc::missing_crate_level_docs, rustdoc::missing_doc_code_examples)]
+#![warn(
+    missing_docs,
+    rustdoc::missing_crate_level_docs,
+    rustdoc::missing_doc_code_examples
+)]
 #![allow(unused_imports)]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(internal_features)]
-#![feature(lang_items, panic_info_message, c_unwind, associated_type_defaults, impl_trait_in_assoc_type)]
-#[cfg_attr(feature = "std", allow(unused))]
-#[macro_use]
-mod macros;
-#[allow(non_snake_case)]
-mod RType;
-mod base;
-#[cfg(not(feature = "std"))]
-pub use base::String;
-#[cfg(not(feature = "std"))]
-pub use base::Vec;
-pub use crate::{base::handle_panic};
+#![feature(
+    lang_items,
+    panic_info_message,
+    c_unwind,
+    associated_type_defaults,
+    impl_trait_in_assoc_type
+)]
+/// private macro, adding feature attributes to items gracefully
+macro syntax_group($($tt:tt)*) { $($tt)* }
+macro private(){
+    /// macros for `no_std` mode.
+    pub mod macros;
+    /// Basic Data Type for R
+    ///
+    /// Should be invisible for users
+    #[allow(non_snake_case)]
+    pub mod RType;
+    /// Basic module for panic handling.
+    pub mod base;
+    #[allow(non_snake_case)]
+    /// Wrapper for SEXP
+    pub mod S;
+}
 
+#[cfg(not(feature="no-private"))]
+syntax_group!{
+    private!{}
+    mod macros;
+    #[allow(non_snake_case)]
+    mod RType;
+    mod base;
+    #[allow(non_snake_case)]
+    mod S;
+}
+/// loaded by RType, thus a private mark here.
 #[allow(non_snake_case)]
 mod libR;
-
-/// Document for some private interface
-///
-/// This module only visible with rustdoc
-/// Any part of this module may change in the future.
-///
-/// # Example
-/// /// R_xlen_t, used for ffi interface.
-///
-/// You should never use this type.
-///
-/// # Example
-///
-/// ```compile_fail
-/// use rmin::doc::*;
-/// ```
-#[doc(cfg(doc))]
-pub mod doc;
-
-#[allow(non_snake_case)]
-/// Wrapper for SEXP
-mod S;
-
-macro use_s($($tt:tt),*){
-    pub use libR::SEXP;
-    pub use S::{$($tt),*, Protected, Newable, Mutable, RType, RTypeMut};
+#[cfg(feature="no-private")]
+syntax_group!{
+    #[allow(non_snake_case)]
+    pub mod RType;
+    pub mod base;
+    #[allow(non_snake_case)]
+    pub mod S;
 }
-use_s!(SEXP,Owned,SExt);
-/// It makes no difference to choose either write `use rmin::prelude::*` or `use rmin::*`.
+/// Prelude, the only thing you could (and should) use
+///
+/// Currently, `rmin` generate a full doc for everything.
 ///
 /// Choose your favorite one:)
 ///
@@ -117,5 +129,8 @@ use_s!(SEXP,Owned,SExt);
 /// use rmin::*;
 /// ```
 pub mod prelude {
-    pub use crate::*;
+    pub use crate::{S::{SEXP, Owned, SExt}, base::handle_panic};
+    #[cfg(not(feature = "std"))]
+    pub use crate::base::{String,Vec};
 }
+pub use prelude::*;

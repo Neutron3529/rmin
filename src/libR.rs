@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct SEXPREC([u8; 0]);
@@ -30,7 +31,7 @@ pub const cetype_t_CE_UTF8: u32 = 1;
 #[link(name = "R", kind = "dylib")]
 extern "C-unwind" {
     // fn Rf_errorcall(call:SEXP, error: *const core::ffi::c_char, ...) -> !; // avoid the possible copy.
-    pub fn Rf_error(error: *const core::ffi::c_char)->!;
+    pub fn Rf_error(error: *const core::ffi::c_char) -> !;
     pub fn Rf_mkCharLenCE(
         data: *const core::ffi::c_char,
         len: core::ffi::c_int,
@@ -65,4 +66,3 @@ extern "C" {
 #[allow(non_camel_case_types)]
 #[doc = "R_xlen_t is defined as int on 32-bit platforms, and\n that confuses Rust. Keeping it always as ptrdiff_t works\n fine even on 32-bit.\n <div rustbindgen replaces=\"R_xlen_t\"></div>"]
 pub type R_xlen_t = isize;
-

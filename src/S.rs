@@ -1,15 +1,21 @@
-use crate::{libR::{TYPEOF, Rf_protect, Rf_unprotect_ptr}, macros::impl_index};
-pub use crate::RType::{RType, RTypeMut};
-use core::{ops::{Index, IndexMut}, marker::PhantomData};
-#[derive(Copy,Clone)]
+pub use crate::RType::{RDefault, RType, RTypeMut, RTypeFrom};
+use crate::{
+    libR::{Rf_protect, Rf_unprotect_ptr, TYPEOF},
+    macros::impl_index,
+};
+use core::{
+    marker::PhantomData,
+    ops::{Index, IndexMut},
+};
+#[derive(Copy, Clone)]
 /// ReadOnly SEXP, should not be changed.
 ///
 /// This is the preferred way for accept ffi values
 /// Since R marked the input values as `readonly`.
 #[repr(transparent)]
-pub struct SEXP<T:RType>{
-    sexp:crate::libR::SEXP,
-    _marker:[PhantomData<T>;0]
+pub struct SEXP<T: RType> {
+    sexp: crate::libR::SEXP,
+    _marker: [PhantomData<T>; 0],
 }
 /// Owned [SEXP](crate::libR::SEXP), allocated by Rust code.
 ///
@@ -18,17 +24,17 @@ pub struct SEXP<T:RType>{
 /// The ideal way is call R functions before it is allocated (e.g., convert all `SEXP<T>` into `&[T]`)
 /// then allocate only 1 Owned object.
 #[repr(transparent)]
-pub struct Owned<T:RType>{
-    sexp:crate::libR::SEXP,
-    _marker:[PhantomData<T>;0]
+pub struct Owned<T: RType> {
+    sexp: crate::libR::SEXP,
+    _marker: [PhantomData<T>; 0],
 }
-impl<T:RType> Owned<T> {
+impl<T: RType> Owned<T> {
     /// This function provides a way to protect any vector from R's GC
     /// You should take care about that, any allocation might recycle the previous allocated vector
     /// In the current fasion, we only alloc 1 return vector, thus protect is not necessary
     /// In case you want to communicate with R functions, you must convert all your [Owned](Owned<T>) values to
     /// the [Protected](Protected<T>) version.
-    pub fn protect(self)->Protected<T> {
+    pub fn protect(self) -> Protected<T> {
         self.into()
     }
 }
@@ -43,23 +49,76 @@ impl<T:RType> Owned<T> {
 /// and should never put [`Protected<T>`] in either side.
 // pub mod protected {}
 #[repr(transparent)]
-pub struct Protected<T:RType>{
-    sexp:crate::libR::SEXP,
-    _marker:[PhantomData<T>;0]
+pub struct Protected<T: RType> {
+    sexp: crate::libR::SEXP,
+    _marker: [PhantomData<T>; 0],
 }
 /// SEXP extensions
 ///
 /// Contains all the operation that a normal SEXP could execute.
-pub trait SExt:Sized {
+pub trait SExt: Sized {
     /// SEXP Associated data, normally double->[f64], integer->[i32], logical->[u32], character->[u8],
     /// check [`RType`](trait.RType.html#foreign-impls) for the full supported list
-    type Data:RType;
+    type Data: RType;
     /// get the inner SEXP.
     fn as_sexp(&self) -> crate::libR::SEXP;
-    /// allocate a new SEXP object with length
-    /// for `u8` (CHARcrate::libR::SEXP), new with length is not allowed
-    /// thus CHARcrate::libR::SEXP accept a String object.
-    fn new(len: <Self::Data as RType>::New ) -> Self where Self:Newable;
+
+
+    /// allocate a new SEXP object with length, and protect it immeditely
+    ///
+    /// for `u8` (CHARSXP), new with length is not allowed
+    /// thus for CHARSXP, it accepts a &str object.
+    fn new(len: usize) -> Protected<Self::Data>
+    where
+    Self::Data: RDefault,
+    {
+        Protected::<Self::Data> {
+            // SAFETY: wrap and protect the sexp, thus safe.
+            sexp: unsafe {<Self::Data as RType>::new(len)},
+            _marker: [],
+        }
+        .into()
+    }
+    /// allocate a new SEXP object with length, and does not protect it.
+    ///
+    /// for `u8` (CHARSXP), new with length is not allowed
+    /// thus for CHARSXP, it accepts a &str object.
+    fn raw(len: usize) -> Owned<Self::Data>
+    where
+    Self::Data: RDefault,
+    {
+        Owned::<Self::Data> {
+            sexp: unsafe {<Self::Data as RType>::new(len)},
+            _marker: [],
+        }
+    }
+    /// Create a R copy from rust object.
+    ///
+    /// The returned pointer is protected.
+    fn from(data: impl core::convert::AsRef<[<Self::Data as RType>::Data]>) -> Protected<Self::Data>
+    where
+    Self::Data: RTypeFrom,
+    {
+        Protected::<Self::Data> {
+            // SAFETY: wrap and protect the sexp, thus safe.
+            sexp: unsafe {<Self::Data as RType>::from(data)},
+            _marker: [],
+        }
+        .into()
+    }
+    /// Create a R copy from rust object.
+    ///
+    /// The returned pointer is unprotected.
+    fn raw_from(data: impl core::convert::AsRef<[<Self::Data as RType>::Data]>) -> Owned<Self::Data>
+    where
+    Self::Data: RTypeFrom,
+    {
+        Owned::<Self::Data> {
+            sexp: unsafe {<Self::Data as RType>::from(data)},
+            _marker: [],
+        }
+    }
+
     /// check whether the data has the desired type
     #[inline(always)]
     fn is_correct_type(&self) -> bool {
@@ -85,17 +144,17 @@ pub trait SExt:Sized {
     /// got the read-only data of a SEXP object
     #[inline(always)]
     fn data(&self) -> &[<Self::Data as RType>::Data] {
-        if self.len()==0 {
+        if self.len() == 0 {
             &[]
         } else {
             if self.is_correct_type() {
                 // SAFETY : len>0 and with correct type.
-                unsafe {self.data_unchecked()}
+                unsafe { self.data_unchecked() }
             } else {
                 panic!(
                     "data has the type {}, but {}(={}) is required.",
                     // SAFETY: FFI calls.
-                    unsafe{TYPEOF(self.as_sexp())},
+                    unsafe { TYPEOF(self.as_sexp()) },
                     core::any::type_name::<<Self::Data as RType>::Data>(),
                     <Self::Data as RType>::SEXPTYPE,
                 )
@@ -107,7 +166,11 @@ pub trait SExt:Sized {
     ///   1. SEXP.is_correct_type()
     ///   2. Self::Data::len(sexp)>0
     #[inline(always)]
-    unsafe fn data_unchecked_mut(&self) -> &mut [<Self::Data as RType>::Data] where <Self as SExt>::Data: RTypeMut, Self:Mutable {
+    unsafe fn data_unchecked_mut(&self) -> &mut [<Self::Data as RType>::Data]
+    where
+        <Self as SExt>::Data: RTypeMut,
+        Self: Mutable,
+    {
         // SAFETY:
         //       : with SEXP.is_correct_type(), data is valid for len * mem::size_of::<T>() many bytes.
         //       : with Self::Data::len(sexp)>0, data is non-null and aligned.
@@ -116,28 +179,36 @@ pub trait SExt:Sized {
     }
     /// got the read-only data of a SEXP object
     #[inline(always)]
-    fn data_mut(&mut self) -> &mut [<Self::Data as RType>::Data] where <Self as SExt>::Data: RTypeMut, Self:Mutable {
-        if self.len()==0 {
+    fn data_mut(&mut self) -> &mut [<Self::Data as RType>::Data]
+    where
+        <Self as SExt>::Data: RTypeMut,
+        Self: Mutable,
+    {
+        if self.len() == 0 {
             &mut []
         } else {
             if self.is_correct_type() {
                 // SAFETY : len>0 and with correct type.
-                unsafe {self.data_unchecked_mut()}
+                unsafe { self.data_unchecked_mut() }
             } else {
                 panic!(
                     "data has the type {}, but {}(={}) is required.",
-                       // SAFETY: FFI calls.
-                       unsafe{TYPEOF(self.as_sexp())},
-                       core::any::type_name::<Self::Data>(),
-                       <Self::Data as RType>::SEXPTYPE,
+                    // SAFETY: FFI calls.
+                    unsafe { TYPEOF(self.as_sexp()) },
+                    core::any::type_name::<Self::Data>(),
+                    <Self::Data as RType>::SEXPTYPE,
                 )
             }
         }
     }
 }
 /// marked SEXP as newable
+/// # Example
+/// ```
+/// impl<T: RType> Newable for Owned<T> {}
+/// ```
 pub trait Newable {}
-impl<T:RType> Newable for Owned<T>{}
+impl<T: RType> Newable for Owned<T> {}
 /// A marker suggeest whether the SEXP is mutable
 ///
 /// Could not obtained manually since it is behind a `macro` invocation
@@ -147,67 +218,69 @@ impl<T:RType> Newable for Owned<T>{}
 /// use rmin::Mutable;
 /// ```
 pub trait Mutable {}
-impl<T:RTypeMut> Mutable for Owned<T>{}
-impl<T:RTypeMut> Mutable for Protected<T>{}
-impl<T:RType> SExt for SEXP<T> {
-    type Data=T;
+impl<T: RTypeMut> Mutable for Owned<T> {}
+impl<T: RTypeMut> Mutable for Protected<T> {}
+impl<T: RType> SExt for SEXP<T> {
+    type Data = T;
     fn as_sexp(&self) -> crate::libR::SEXP {
         self.sexp
     }
-    fn new(len:<Self::Data as RType>::New)->Self{
-        Self{sexp:Self::Data::new(len),_marker:[]}
-    }
 }
-impl<T:RType> SExt for Owned<T> {
-    type Data=T;
+impl<T: RType> SExt for Owned<T> {
+    type Data = T;
     fn as_sexp(&self) -> crate::libR::SEXP {
         self.sexp
     }
-    fn new(len:<Self::Data as RType>::New)->Self{
-        Self{sexp:Self::Data::new(len),_marker:[]}
-    }
 }
-impl<T:RType> SExt for Protected<T> {
-    type Data=T;
+impl<T: RType> SExt for Protected<T> {
+    type Data = T;
     fn as_sexp(&self) -> crate::libR::SEXP {
         self.sexp
     }
-    fn new(len:<Self::Data as RType>::New)->Self{
-        // SAFETY: FFI calls.
-        Self{sexp:unsafe { Rf_protect(Self::Data::new(len)) },_marker:[]}
-    }
 }
-impl<T:RType> From<Owned<T>> for Protected<T> {
+impl<T: RType> From<Owned<T>> for Protected<T> {
     #[inline(always)]
     fn from(s: Owned<T>) -> Self {
         // SAFETY: FFI calls.
-        Self{sexp:unsafe { Rf_protect(s.sexp) },_marker:[]}
+        Self {
+            sexp: unsafe { Rf_protect(s.sexp) },
+            _marker: [],
+        }
     }
 }
-impl<T:RType> From<Protected<T>> for Owned<T> {
+impl<T: RType> From<Protected<T>> for Owned<T> {
     #[inline(always)]
     fn from(s: Protected<T>) -> Self {
-        Self{sexp:s.sexp ,_marker:[]}
+        Self {
+            sexp: s.sexp,
+            _marker: [],
+        }
         // s is dropped and thus unprotected.
     }
 }
-impl<T:RType> From<Protected<T>> for SEXP<T> {
+impl<T: RType> From<Protected<T>> for SEXP<T> {
     #[inline(always)]
     fn from(s: Protected<T>) -> Self {
-        Self{sexp:s.sexp,_marker:[]}
+        Self {
+            sexp: s.sexp,
+            _marker: [],
+        }
         // s is dropped and thus unprotected.
     }
 }
-impl<T:RType> From<Owned<T>> for SEXP<T> {
+impl<T: RType> From<Owned<T>> for SEXP<T> {
     #[inline(always)]
     fn from(s: Owned<T>) -> Self {
-        Self{sexp:s.sexp,_marker:[]}
+        Self {
+            sexp: s.sexp,
+            _marker: [],
+        }
     }
 }
-impl<T:RType> Drop for Protected<T> {
+impl<T: RType> Drop for Protected<T> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe { Rf_unprotect_ptr(self.sexp) }
     }
 }
-impl_index!{SExt=SExt RType=RType RTypeMut=RTypeMut Mutable=Mutable, SEXP Owned Protected}
+impl_index! {SExt=SExt RType=RType RTypeMut=RTypeMut Mutable=Mutable, SEXP Owned Protected}

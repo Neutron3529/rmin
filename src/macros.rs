@@ -1,14 +1,13 @@
-pub macro syntax_group($($tt:tt)*) { $($tt)* }
-#[cfg(not(feature="std"))]
-syntax_group!{
-    /// Print things into R
-    pub macro println ($($tt:tt)*) => {
-        let mut x=String::new();
-        ::core::fmt::write(&mut x, format_args!($($tt)*)).and_then(|_|::core::fmt::write(&mut x, format_args!("\n\0"))).expect("failed to write string");
-        #[allow(unused_unsafe)]
-        unsafe{ crate::libR::Rprintf(x.as_ptr() as *const ::core::ffi::c_char) }
-    }
+#[doc(cfg(not(feature = "std")))]
+/// Print things into R
+pub macro println ($($tt:tt)*) {
+    let mut x=String::new();
+    ::core::fmt::write(&mut x, format_args!($($tt)*)).and_then(|_|::core::fmt::write(&mut x, format_args!("\n\0"))).expect("failed to write string");
+    #[allow(unused_unsafe)]
+    unsafe{ crate::libR::Rprintf(x.as_ptr() as *const ::core::ffi::c_char) }
 }
+/// detailed impl for [`S`]
+/// might be moved to [`S::macros`]
 pub macro impl_index (SExt=$SExt:tt RType=$RType:tt RTypeMut=$RTypeMut:tt Mutable=$Mutable:tt,$($tt:tt)*) {
     $(
         impl<T: $RType> core::ops::Index<usize> for $tt<T> where $tt<T>:$SExt  {

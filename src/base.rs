@@ -1,4 +1,4 @@
-use crate::{libR::Rf_error, SExt, SEXP, Owned};
+use crate::{libR::Rf_error, Owned, SExt, SEXP};
 use core::ffi::c_char;
 /// The most common function that may use close to the FFI boundary.
 /// This function could catch all possible panic and convert them into normal R error message.
@@ -11,13 +11,13 @@ use core::ffi::c_char;
 /// });
 /// ```
 #[cfg(feature = "std")]
-pub fn handle_panic<R,F:FnOnce()->R+ std::panic::UnwindSafe>(f:F)->R {
+pub fn handle_panic<R, F: FnOnce() -> R + std::panic::UnwindSafe>(f: F) -> R {
     let thing = match std::panic::catch_unwind(f) {
-        Ok(ret)=>return ret,
-        Err(info)=>{
+        Ok(ret) => return ret,
+        Err(info) => {
             match info.downcast::<String>() {
-                Ok(string)=>Owned::<crate::RType::character>::new(format!("{:?}",string)),
-                Err(info)=>Owned::<crate::RType::character>::new(format!("payload type: {} (panic with no information)",core::any::type_name_of_val(&info)))
+                Ok(string)=>Owned::<crate::RType::character>::raw_from(format!("{:?}",string)),
+                Err(info)=>Owned::<crate::RType::character>::raw_from(format!("payload type: {} (panic with no information)",core::any::type_name_of_val(&info)).as_str())
             }
         }
     };
