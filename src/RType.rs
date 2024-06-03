@@ -5,9 +5,22 @@ use core::ffi::c_char;
 pub fn len(s:SEXP) -> R_xlen_t {
     unsafe { Rf_xlength(s) }
 }
+/// Basic R data type
+///
+/// Since it is defined behind a macro invocation, thus it cannot be touched.
+/// Currently, RType is defined for 4 types, `f64` (R double), `i32` (R integer), `u32` (R logical) and `u8` (R character)
+/// May add further implementations.
+///
 pub trait RType:Copy {
+    /// the real SEXPTYPE of the data,
+    ///
+    /// Only a limited part of SEXPTYPE is supported, see [Implementors](#implementors) part.
+    ///
     const SEXPTYPE:SEXPTYPE;
+    /// indicate the underlying data type.
     type Data:Copy=Self; // For more custom type in case collision happened.
+    /// parameter that should be sent to `new`. Currently [`R_xlen_t`](crate::doc::R_xlen_t) for things other than character.
+    /// For character, a [`String`] is required
     type New;
     /// allocate a owned new vector with given length.
     /// for charater, yield a new R character object from a give &str.
@@ -35,19 +48,25 @@ pub trait RType:Copy {
 }
 /// SAFETY: need to unsure the underlying type is modifyable.
 pub unsafe trait RTypeMut:RType {}
-
+/// bind u32 with R logical type
 #[allow(non_camel_case_types)]
 pub type logical=u32;
+/// bind i32 with R integer type
 #[allow(non_camel_case_types)]
 pub type integer=i32;
+/// bind f64 with R numeric type
 #[allow(non_camel_case_types)]
 pub type numeric=f64;
+/// bind u8 with R character type (read only!)
 #[allow(non_camel_case_types)]
 pub type character=u8;
-
+/// R character type
 pub const CHARSXP: SEXPTYPE = 9;
+/// R logical type
 pub const LGLSXP: SEXPTYPE = 10;
+/// R integer type
 pub const INTSXP: SEXPTYPE = 13;
+/// R numeric type
 pub const REALSXP: SEXPTYPE = 14;
 
 impl RType for character {

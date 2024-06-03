@@ -1,4 +1,5 @@
-use crate::{libR::{TYPEOF, Rf_protect, Rf_unprotect_ptr}, RType::{RType, RTypeMut}};
+use crate::{libR::{TYPEOF, Rf_protect, Rf_unprotect_ptr}, macros::impl_index};
+pub use crate::RType::{RType, RTypeMut};
 use core::{ops::{Index, IndexMut}, marker::PhantomData};
 #[derive(Copy,Clone)]
 /// ReadOnly SEXP, should not be changed.
@@ -31,9 +32,15 @@ impl<T:RType> Owned<T> {
         self.into()
     }
 }
+/// Protected SEXP, should not be transferred across FFI boundary.
+///
 /// Since return a protected vector back to R will cause memory leak, this struct is marked as private
-/// The interface of `Proteted<T>` and `Owned<T>` is almost the same (expect `Owned<T>` have an extra `.protected()` function call that protected the owned object to a `Protected<T>`)
-/// for FFI, you should only use `extern "C-unwind" fn(SEXP<T1>, SEXP<T2>, ...)->Owned<TRet>`, and should never put `Protected<T>` in either side.
+/// The interface of [`Proteted<T>`](Self) and [`Owned<T>`] is almost the same (expect [`Owned<T>`] have an extra [`.protect()`](Owned::protect) function call that protected the owned object to a [`Protected<T>`])
+/// for FFI, you should only use
+/// ```
+/// extern "C-unwind" fn(SEXP<T1>, SEXP<T2>, ...)->Owned<TRet>
+/// ```
+/// and should never put [`Protected<T>`] in either side.
 // pub mod protected {}
 #[repr(transparent)]
 pub struct Protected<T:RType>{
@@ -45,7 +52,7 @@ pub struct Protected<T:RType>{
 /// Contains all the operation that a normal SEXP could execute.
 pub trait SExt:Sized {
     /// SEXP Associated data, normally double->[f64], integer->[i32], logical->[u32], character->[u8],
-    /// Other data might be added in the future.
+    /// check [`RType`](trait.RType.html#foreign-impls) for the full supported list
     type Data:RType;
     /// get the inner SEXP.
     fn as_sexp(&self) -> crate::libR::SEXP;
@@ -131,7 +138,14 @@ pub trait SExt:Sized {
 /// marked SEXP as newable
 pub trait Newable {}
 impl<T:RType> Newable for Owned<T>{}
-/// actually !Copy, since `SEXP<T>` is Copy, we cannot modify any [SEXP](crate::libR::SEXP).
+/// A marker suggeest whether the SEXP is mutable
+///
+/// Could not obtained manually since it is behind a `macro` invocation
+///
+/// # Example
+/// ```
+/// use rmin::Mutable;
+/// ```
 pub trait Mutable {}
 impl<T:RTypeMut> Mutable for Owned<T>{}
 impl<T:RTypeMut> Mutable for Protected<T>{}
@@ -196,4 +210,4 @@ impl<T:RType> Drop for Protected<T> {
         unsafe { Rf_unprotect_ptr(self.sexp) }
     }
 }
-impl_index!{SEXP Owned Protected}
+impl_index!{SExt=SExt RType=RType RTypeMut=RTypeMut Mutable=Mutable, SEXP Owned Protected}

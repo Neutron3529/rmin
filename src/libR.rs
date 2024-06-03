@@ -1,6 +1,24 @@
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct SEXPREC([u8; 0]);
+/// Raw SEXP expression, should not be used.
+///
+/// Since it is decleared under a hygiene macro, you cannot access it.
+///
+/// # Example
+/// ```no_run
+/// // using rmin::SEXP instead.
+/// use rmin::{Owned, SEXP};
+/// #[no_mangle] // do not forget this attribute
+///              // otherwise you cannot call this function from R.
+/// extern fn entry (
+///     double:SEXP<f64>, // for R double type
+///     integer:SEXP<i32>, // for R integer type
+///     logical:SEXP<u32>, // for R logical type
+///     character:SEXP<u8>, // for R character type
+/// ) -> Owned<u8> {todo!()}
+/// ```
+/// the available SEXP type could be checked from [`crate::RType::RType`]
 pub type SEXP = *mut SEXPREC;
 #[doc = "NOT YET using enum:\n  1)\tThe internal SEXPREC struct has 'SEXPTYPE type : 5'\n\t(making FUNSXP and CLOSXP equivalent in there),\n\tgiving (-Wall only ?) warnings all over the place\n 2)\tMany switch(type) { case ... } statements need a final `default:'\n\tadded in order to avoid warnings like [e.g. l.170 of ../main/util.c]\n\t  \"enumeration value `FUNSXP' not handled in switch\""]
 pub type SEXPTYPE = core::ffi::c_uint;
@@ -48,5 +66,3 @@ extern "C" {
 #[doc = "R_xlen_t is defined as int on 32-bit platforms, and\n that confuses Rust. Keeping it always as ptrdiff_t works\n fine even on 32-bit.\n <div rustbindgen replaces=\"R_xlen_t\"></div>"]
 pub type R_xlen_t = isize;
 
-#[allow(non_snake_case)]
-pub mod S;

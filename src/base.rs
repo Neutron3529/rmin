@@ -4,8 +4,9 @@ use core::ffi::c_char;
 /// This function could catch all possible panic and convert them into normal R error message.
 /// # Usage:
 /// ```no_run
+/// use rmin::*;
 /// handle_panic(||{
-///     let a=Vec::with_capacity(16);
+///     let a:Vec<_>=(0..16).collect();
 ///     panic!("handle_panic will drop `a` even a panic is triggered.")
 /// });
 /// ```
