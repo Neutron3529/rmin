@@ -26,10 +26,11 @@
 //!
 //! ### Changes:
 //!
-//! 1. \[ \] Add a [`panic_handler`] for `no_std`.
-//! 2. \[ \] Move `SEXP<T>` to [`Sexp<T>`] thus SEXP and Sexp could be occur in the same situation
-//! 3. \[x\] Using macro 2.0 to hide most of the struct and method from user interface, but remains the doc for debug purpose.
-//! 4. \[ \] Adding support for lists
+//! 1. \[ x \] currently, new method and from (rust type) method goes to SExt, you could still write [`Owned<T>`]`::`[`new`](crate::prelude::Owned::new)`()`, but a [`Protected<T>`](crate::base::s::Protected) yields.
+//! 2. \[   \] Add a [`panic_handler`] for `no_std`.
+//! 3. \[   \] Move `SEXP<T>` to [`Sexp<T>`] thus SEXP and Sexp could be occur in the same situation
+//! 4. \[ x \] Using macro 2.0 to hide most of the struct and method from user interface, but remains the doc for debug purpose.
+//! 5. \[   \] Adding support for lists
 //!
 //! ### grammar
 //! ```rust
