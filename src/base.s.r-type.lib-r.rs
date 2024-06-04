@@ -13,13 +13,12 @@ pub struct SEXPREC([u8; 0]);
 /// #[no_mangle] // do not forget this attribute
 ///              // otherwise you cannot call this function from R.
 /// extern fn entry (
-///     double:SEXP<f64>, // for R double type
-///     integer:SEXP<i32>, // for R integer type
-///     logical:SEXP<u32>, // for R logical type
-///     character:SEXP<u8>, // for R character type
-/// ) -> Owned<u8> {todo!()}
+///     numeric:Sexp<numeric>, // for R numeric type
+///     integer:Sexp<integer>, // for R integer type
+///     logical:Sexp<logical>, // for R logical type
+///     character:Sexp<character>, // for R character type
+/// ) -> Owned<NULL> {todo!()}
 /// ```
-/// the available SEXP type could be checked from [`crate::RType::RType`]
 pub type SEXP = *mut SEXPREC;
 #[doc = "NOT YET using enum:\n  1)\tThe internal SEXPREC struct has 'SEXPTYPE type : 5'\n\t(making FUNSXP and CLOSXP equivalent in there),\n\tgiving (-Wall only ?) warnings all over the place\n 2)\tMany switch(type) { case ... } statements need a final `default:'\n\tadded in order to avoid warnings like [e.g. l.170 of ../main/util.c]\n\t  \"enumeration value `FUNSXP' not handled in switch\""]
 pub type SEXPTYPE = core::ffi::c_uint;
@@ -45,17 +44,19 @@ extern "C" {
     pub fn Rf_allocVector(arg1: SEXPTYPE, arg2: R_xlen_t) -> SEXP;
     pub fn Rf_protect(arg1: SEXP) -> SEXP;
     pub fn Rf_unprotect_ptr(arg1: SEXP);
-    #[cfg(not(feature = "std"))]
-    syntax_group! {
-        pub fn R_chk_calloc(count: usize, size_and_align: usize) -> *mut core::ffi::c_void;
-        pub fn R_chk_realloc(ptr: *mut core::ffi::c_void, new_size: usize) -> *mut core::ffi::c_void;
-        pub fn R_chk_free(ptr: *mut core::ffi::c_void);
-        pub fn Rprintf(arg1: *const core::ffi::c_char, ...);
-    }
+    #[doc(cfg(not(feature = "std")))]
+    pub fn R_chk_calloc(count: usize, size_and_align: usize) -> *mut core::ffi::c_void;
+    #[doc(cfg(not(feature = "std")))]
+    pub fn R_chk_realloc(ptr: *mut core::ffi::c_void, new_size: usize) -> *mut core::ffi::c_void;
+    #[doc(cfg(not(feature = "std")))]
+    pub fn R_chk_free(ptr: *mut core::ffi::c_void);
+    #[doc(cfg(not(feature = "std")))]
+    pub fn Rprintf(arg1: *const core::ffi::c_char, ...);
     pub fn Rf_xlength(arg1: SEXP) -> R_xlen_t;
     pub fn DATAPTR_RO(x: SEXP) -> *const core::ffi::c_void;
     pub fn DATAPTR(x: SEXP) -> *mut core::ffi::c_void;
     pub fn TYPEOF(x: SEXP) -> SEXPTYPE;
+    pub static mut R_NilValue:SEXP;
     // pub fn Rf_isReal(x: SEXP) -> Rboolean;
     // pub fn Rf_isLogical(x: SEXP) -> Rboolean;
     // pub fn Rf_isInteger(x: SEXP) -> Rboolean;
@@ -63,6 +64,7 @@ extern "C" {
 // pub fn Rf_error(error: *const core::ffi::c_char)->!{
 //     unsafe { Rf_errorcall(R_CurrentExpression,error) }
 // }
+
 #[allow(non_camel_case_types)]
 #[doc = "R_xlen_t is defined as int on 32-bit platforms, and\n that confuses Rust. Keeping it always as ptrdiff_t works\n fine even on 32-bit.\n <div rustbindgen replaces=\"R_xlen_t\"></div>"]
 pub type R_xlen_t = isize;

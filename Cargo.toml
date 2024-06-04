@@ -11,7 +11,7 @@ repository = "https://github.com/Neutron3529/rmin"
 [features]
 default=["std"]
 std = []
-no-private = []
+public-all = []
 
 [[example]]
 name = "compare-rmin"

@@ -1,15 +1,10 @@
 /// minimal low-level libR-sys.
-pub mod libR {
-    pub use crate::libR::*;
-}
-use libR::*;
+#[path = "base.s.r-type.lib-r.rs"]
+pub mod lib_r;
+use lib_r::*;
+pub use lib_r::{SEXP, SEXPTYPE};
 use core::ffi::c_char;
-/// get length of a SEXP type.
-#[inline(always)]
-pub fn len(s: SEXP) -> R_xlen_t {
-    unsafe { Rf_xlength(s) }
-}
-
+use super::{SExt, Sexp, Owned, Protected}; // for doc generations
 mod macros {
     // pub macro RType(RType=$RType:tt SEXPTYPE=$SEXPTYPE:tt R_xlen_t=$R_xlen_t:tt Rf_allocVector=$Rf_allocVector:tt SEXP=$SEXP:tt, ty=$ty:tt Rty=$Rty:tt RCODE=$RCODE:tt=$RCODEVAL:tt){
     //     /// bind $ty with R $Rty type
@@ -28,27 +23,32 @@ mod macros {
         $macros!{$trait with {$($extra)*} for $($t)*}
         // $($($extra)* impl $trait for $t $tblk)*
     }
-    pub macro RTypeMatrix($trait:tt with {$SEXPTYPE:tt} for $($ty:ty, $Rty:tt, $RCode:tt $RCodeVal:tt {$($extraTrait:tt)*});*$(;)?) {$(
+    pub macro RTypeMatrix($trait:tt with {$SEXPTYPE:tt} for $($ty:ty $(: $alias:literal)?, $Rty:tt, $RCode:tt $RCodeVal:tt {$($extraTrait:tt)*});*$(;)?) {$(
         // /// bind u8 with R character type (read only!)
-        #[doc=core::concat!(" bind [`",core::stringify!($ty),"`] with R [`",core::stringify!($Rty),"`] type")]
+        // #[doc=core::concat!(" bind [`",core::stringify!($ty),"`] with R [`",core::stringify!($Rty),"`] type")]
         // #[allow(non_camel_case_types)]
         #[allow(non_camel_case_types)]
         // pub type character = u8;
-        #[doc=core::concat!(" R [`SEXP`](crate::libR::SEXP) with type ",$RCodeVal," has R type [`",core::stringify!($Rty), "`] and is defined into [`",core::stringify!($ty) ,"`]")]
+        #[doc=core::concat!("Data type that an R [`SEXP`] with [`stype`](SEXPext::stype)` == ",$RCodeVal,"` contains.")]
+        #[doc=""]
+        #[doc=core::concat!("Such [`SEXP`] has R type [`",core::stringify!($Rty), "`] and is defined into Rust [`",core::stringify!($ty) ,"`]",$($alias,)?" type")]
         pub type $Rty = $ty;
         // character { const SEXPTYPE:SEXPTYPE=CHARSXP; } { #[doc = " R character type"] pub const CHARSXP: SEXPTYPE = 9; }
         #[doc=core::concat!(" R [`",core::stringify!($Rty),"`] type")] pub const $RCode: $SEXPTYPE = $RCodeVal;
-        impl $trait for $Rty { #[doc=core::concat!("[`SEXP`](crate::libR::SEXP) type of R [`",core::stringify!($Rty), "`] type is ",$RCodeVal)] const $SEXPTYPE:$SEXPTYPE=$RCode; }
+        impl $trait for $Rty { #[doc=core::concat!("[`SEXP`] type of R [`",core::stringify!($Rty), "`] type is ",$RCodeVal)] const $SEXPTYPE:$SEXPTYPE=$RCode; }
         $(impl $extraTrait for $Rty {})*
     )*}
 }
 use macros::{RTypeMatrix, trait_def};
 trait_def!(
-/// Basic R data type
+/// Basic R data storage type
 ///
 /// Since it is defined behind a macro invocation, thus it cannot be touched.
-/// Currently, RType is defined for 4 types, `f64` (R double), `i32` (R integer), `u32` (R logical) and `u8` (R character)
-/// May add further implementations.
+/// Currently, RType is defined for 4 types:
+///
+/// [`f64`] (R [`numeric`]), [`i32`] (R [`integer`]), [`u32`] (R [`logical`]) and [`u8`] (R [`character`])
+///
+/// [See the full supported list here](#implementors)
 ;
 { pub }
 RType
@@ -61,25 +61,38 @@ Copy
     const SEXPTYPE:SEXPTYPE;
     /// indicate the underlying data type.
     type Data:Copy=Self; // For more custom type in case collision happened.
-    // /// parameter that should be sent to `new`. Currently [`R_xlen_t`](crate::doc::R_xlen_t) for things other than character.
+    // /// parameter that should be sent to `new`. Currently [`R_xlen_t`] for things other than character.
     // /// For character, a [`String`] is required
     /// Allocate a new [`SEXP`] object with default value of length `len`
     ///
-    /// SAFETY: You should adding additional marker such as `[Owned<T>](crate::Owned){sexp:[SEXP], _marker:[]}` or `[Protected<T>](crate::Protected){sexp:[SEXP], _marker:[]}`
-    /// Both method require visit the private constructor or a dangerous transmute (you should never transmute [`SEXP`] into [`Protected<T>`](crate::S::Protected)).
+    /// SAFETY: You should adding additional marks such as
+    ///
+    /// [`Owned<T>`]`{`[`sexp`](Owned)`:`[`SEXP`]`, `[`_marker`](Owned)`:[]}`
+    ///
+    /// or
+    ///
+    /// [`Protected<T>`]`{`[`sexp`](Protected)`:`[`SEXP`]`.`[`protect`]()`(), `[`_marker`](Protected)`:[]}`
+    ///
+    /// it requires visiting the private constructor or a dangerous transmute (you should never transmute [`SEXP`] into [`Protected<T>`]).
+    ///
     /// Actually, since the re-export is behind a macro, you might never access this crate.
-    /// # Example
-    /// ```compile_fail
-    /// use crate::RType::RType;
-    /// ```
     unsafe fn new(len: usize) -> SEXP where Self : RDefault {
         // SAFETY: marked the SEXP as either Owned or Protected, thus is safe.
         unsafe {<Self as RDefault>::new(len as R_xlen_t)}
     }
-    /// Create a R copy from rust object.
+    /// Create a R copy from Rust object.
     ///
-    /// Although get a pointer should be safe, I marked it as an unsafe function
-    /// Since you must mark the correct type (and protect it later).
+    /// SAFETY: You should adding additional marks such as
+    ///
+    /// [`Owned<T>`]`{`[`sexp`](Owned)`:`[`SEXP`]`, `[`_marker`](Owned)`:[]}`
+    ///
+    /// or
+    ///
+    /// [`Protected<T>`]`{`[`sexp`](Protected)`:`[`SEXP`]`.`[`protect`]()`(), `[`_marker`](Protected)`:[]}`
+    ///
+    /// it requires visiting the private constructor or a dangerous transmute (you should never transmute [`SEXP`] into [`Protected<T>`]).
+    ///
+    /// Actually, since the re-export is behind a macro, you might never access this crate.
     #[inline(always)]
     unsafe fn from(s:impl core::convert::AsRef<[<Self as RType>::Data]>) -> SEXP where Self:RTypeFrom {
         unsafe {<Self as RTypeFrom>::from(s)}
@@ -106,6 +119,7 @@ Copy
     }
 }
 for RTypeMatrix { SEXPTYPE }
+    ():"(unit)", NULL, NILSXP 0 { };
     u8, character, CHARSXP 9 { };
     u32, logical, LGLSXP  10 {RDefault RTypeMut};
     i32, integer, INTSXP  13 {RDefault RTypeMut};
@@ -121,6 +135,12 @@ pub trait RDefault: RType {
     unsafe fn new(len: R_xlen_t) -> SEXP {
         // SAFETY: FFI call.
         unsafe { Rf_allocVector(<Self as RType>::SEXPTYPE, len) }
+    }
+}
+impl RDefault for NULL {
+    /// Note: the new method with [`NULL`] type only yields a vector with length 0, no memory allocation occurs.
+    unsafe fn new(_len: R_xlen_t) -> SEXP {
+        R_NilValue
     }
 }
 /// Indicate whether a [`RType`] could be mutablly indexed.
@@ -164,4 +184,85 @@ impl RTypeFrom for character {
             cetype_t_CE_UTF8
         )}
     }
+}
+/// unsafe trait for [`SEXP`]
+pub trait SEXPext:Copy {
+    /// Protect a [`SEXP`] variable
+    ///
+    /// It is a really dangerous function that you should not use it at all.
+    ///
+    /// If you insist to call this function, file an issue and tell me why.
+    /// In most cases, [`Owned<T>`] and [`Protected<T>`] is enough.
+    ///
+    /// SAFETY: in case the type is a field of [`Owned<T>`], the result will wrapping in a [`Protected<T>`], then it could be safe.
+    ///
+    /// Otherwise, use at your own risk.
+    unsafe fn protect(self)->Self;
+
+    /// Unprotect a [`SEXP`] variable
+    ///
+    /// It is a really dangerous function that you should not use it at all.
+    ///
+    /// If you insist to call this function, file an issue and tell me why.
+    /// In most cases, [`Owned<T>`] and [`Protected<T>`] is enough.
+    ///
+    /// SAFETY: in case the type is a field of [`Protected<T>`], the result will wrapping in a non-[`Protected<T>`] field, then it could be safe.
+    ///
+    /// Otherwise, use at your own risk.
+    unsafe fn unprotect(self);
+
+    /// get stype
+    /// SAFETY: this function should be safe, but the previous function `*.as_sexp()` could be unsafe.
+    /// Mark it as unsafe since using `[SExt::stype]` might be better.
+    unsafe fn stype(self)->SEXPTYPE;
+
+    /// get length of a SEXP type.
+    /// SAFETY: this function should be safe, but the previous function `*.as_sexp()` could be unsafe.
+    /// Mark it as unsafe since using `[SExt::len]` might be better.
+    unsafe fn len(self) -> R_xlen_t;
+}
+impl SEXPext for SEXP {
+    #[inline(always)]
+    unsafe fn protect(self)->Self {
+        // SAFETY: FFi calls.
+        unsafe {Rf_protect(self)}
+    }
+    #[inline(always)]
+    unsafe fn unprotect(self) {
+        // SAFETY: FFi calls.
+        unsafe {Rf_unprotect_ptr(self)}
+    }
+    #[inline(always)]
+    unsafe fn stype(self)->SEXPTYPE {
+        // SAFETY: FFi calls.
+        unsafe {TYPEOF(self)}
+    }
+    #[inline(always)]
+    unsafe fn len(self) -> R_xlen_t {
+        unsafe { Rf_xlength(self) }
+    }
+}
+
+/// REALLY UNSAFE FUNCTION
+///
+/// YOU SHOULD NOT USE IT AT ALL.
+///
+/// UNLESS YOU ARE AN EXPERT OF BOTH R AND RUST.
+///
+/// In case you want to issue an error, just use the [`panic`] macro is enough.
+/// This really dangerous function is used for implementing a new panic handler.
+/// When you really need this function, considering writting a new lib might be better.
+///
+/// SAFETY: This function contains a longjmp, thus calling it directly might involve a memory leak.
+/// You could only use it after R executed all deconstructors.
+/// To be specific, at the end of an FFI call, after call drop
+/// to anything you could call.
+/// Otherwise, memory leak may happens by the longjmp instruction in the R internal `Rf_error` function.
+pub fn error(message:*const character)->!{
+    unsafe { Rf_error(message as *const c_char) }
+    // if self.stype() != character::SEXPTYPE {
+    //     Rf_error("attempt to call error with non-character type!\0".as_ptr() as *const c_char);
+    // } else {
+    //     Rf_error(character::data(self) as *const c_char)
+    // }
 }

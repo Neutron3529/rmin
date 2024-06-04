@@ -1,4 +1,8 @@
-use crate::{libR::Rf_error, Owned, SExt, SEXP};
+#[allow(non_snake_case)]
+/// Wrapper for SEXP
+#[path="base.s.rs"]
+pub mod s;
+use crate::prelude::*;
 use core::ffi::c_char;
 /// The most common function that may use close to the FFI boundary.
 /// This function could catch all possible panic and convert them into normal R error message.
@@ -10,30 +14,37 @@ use core::ffi::c_char;
 ///     panic!("handle_panic will drop `a` even a panic is triggered.")
 /// });
 /// ```
-#[cfg(feature = "std")]
+// #[cfg(feature = "std")]
 pub fn handle_panic<R, F: FnOnce() -> R + std::panic::UnwindSafe>(f: F) -> R {
-    let thing = match std::panic::catch_unwind(f) {
+    let thing = match
+    {#[cfg(feature = "std")] {
+        std::panic::catch_unwind(f)
+    }
+    #[cfg(not(feature = "std"))] {
+    no_std::catch_unwind(f)
+    }}
+    {
         Ok(ret) => return ret,
         Err(info) => {
             match info.downcast::<String>() {
-                Ok(string)=>Owned::<crate::RType::character>::raw_from(format!("{:?}",string)),
-                Err(info)=>Owned::<crate::RType::character>::raw_from(format!("payload type: {} (panic with no information)",core::any::type_name_of_val(&info)).as_str())
+                Ok(string)=>Owned::<character>::raw_from(format!("{:?}",string)),
+                Err(info)=>Owned::<character>::raw_from(format!("payload type: {} (panic with no information)",core::any::type_name_of_val(&info)).as_str())
             }
         }
     };
-    unsafe {Rf_error(thing.data().as_ptr() as *const c_char)}
+    unsafe {thing.error()}
 }
 #[cfg(not(feature = "std"))]
-syntax_group! {
+pub mod no_std {
     extern crate alloc;
     use alloc::alloc::{GlobalAlloc, Layout};
     pub use alloc::{string::String, vec::Vec};
-    use libR::{R_chk_calloc, R_chk_free, R_chk_realloc};
+    use crate::base::s::r_type::lib_r::{R_chk_calloc, R_chk_free, R_chk_realloc};
     /// TODO: writting unwind code to enable unwind feature.
     #[lang = "eh_personality"]
     pub extern "C" fn rust_eh_personality() {}
 
-    struct SimpleAllocator();
+    pub struct SimpleAllocator();
     #[global_allocator]
     static ALLOCATOR: SimpleAllocator = SimpleAllocator();
     unsafe impl Sync for SimpleAllocator {}
