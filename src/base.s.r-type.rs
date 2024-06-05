@@ -5,10 +5,10 @@ use lib_r::*;
 pub use lib_r::{SEXP, SEXPTYPE};
 use core::ffi::c_char;
 use super::{SExt, Sexp, Owned, Protected}; // for doc generations
-mod macros {
+/// macros for define additional RType, for crate developer only.
+pub mod macros {
     // pub macro RType(RType=$RType:tt SEXPTYPE=$SEXPTYPE:tt R_xlen_t=$R_xlen_t:tt Rf_allocVector=$Rf_allocVector:tt SEXP=$SEXP:tt, ty=$ty:tt Rty=$Rty:tt RCODE=$RCODE:tt=$RCODEVAL:tt){
     //     /// bind $ty with R $Rty type
-    //     #[allow(non_camel_case_types)]
     //     pub type $Rty=$ty;
     //     /// R $Rty type
     //     pub const $RCODE: $SEXPTYPE = $RCODEVAL;
@@ -16,6 +16,7 @@ mod macros {
     //         const $SEXPTYPE:$SEXPTYPE=$RCODE;
     //     }
     // }
+    /// simple wrapper for defining an arbitrary trait
     pub macro trait_def($(#[$m:meta])*; {$($vis:tt)*} $trait:tt $qual:tt $blk:tt for $macros:tt {$($extra:tt)*} $($t:tt)*){
         $(#[$m])*
         $($vis)* trait $trait : $qual
@@ -23,21 +24,36 @@ mod macros {
         $macros!{$trait with {$($extra)*} for $($t)*}
         // $($($extra)* impl $trait for $t $tblk)*
     }
-    pub macro RTypeMatrix($trait:tt with {$SEXPTYPE:tt} for $($ty:ty $(: $alias:literal)?, $Rty:tt, $RCode:tt $RCodeVal:tt {$($extraTrait:tt)*});*$(;)?) {$(
-        // /// bind u8 with R character type (read only!)
-        // #[doc=core::concat!(" bind [`",core::stringify!($ty),"`] with R [`",core::stringify!($Rty),"`] type")]
-        // #[allow(non_camel_case_types)]
-        #[allow(non_camel_case_types)]
-        // pub type character = u8;
-        #[doc=core::concat!("Data type that an R [`SEXP`] with [`stype`](SEXPext::stype)` == ",$RCodeVal,"` contains.")]
-        #[doc=""]
-        #[doc=core::concat!("Such [`SEXP`] has R type [`",core::stringify!($Rty), "`] and is defined into Rust [`",core::stringify!($ty) ,"`]",$($alias,)?" type")]
-        pub type $Rty = $ty;
-        // character { const SEXPTYPE:SEXPTYPE=CHARSXP; } { #[doc = " R character type"] pub const CHARSXP: SEXPTYPE = 9; }
-        #[doc=core::concat!(" R [`",core::stringify!($Rty),"`] type")] pub const $RCode: $SEXPTYPE = $RCodeVal;
-        impl $trait for $Rty { #[doc=core::concat!("[`SEXP`] type of R [`",core::stringify!($Rty), "`] type is ",$RCodeVal)] const $SEXPTYPE:$SEXPTYPE=$RCode; }
-        $(impl $extraTrait for $Rty {})*
-    )*}
+    /// wrapper for easily defining the RType implementations
+    pub macro RTypeMatrix($trait:tt with {$SEXPTYPE:tt $alias:tt $define:tt $self:tt} for $($ty:ty $(: $tyalias:literal)?, $Rty:tt, $RCode:tt $(=$RCodeVal:tt)? {$($extraTrait:tt)*});*$(;)?) {
+        $(
+            // /// bind u8 with R character type (read only!)
+            // #[doc=core::concat!(" bind [`",core::stringify!($ty),"`] with R [`",core::stringify!($Rty),"`] type")]
+            #[allow(non_camel_case_types)]
+            // pub type character = u8;
+            #[doc=core::concat!("Data type that an R [`SEXP`] with [`stype`](SEXPext::stype)` == `[`",stringify! ($RCode),"`] "$(,"(",$RCodeVal,")")?," contains.")]
+            #[doc=""]
+            #[doc=core::concat!("Such [`SEXP`] has R type [`",core::stringify!($Rty), "`] and is defined into Rust [`",core::stringify!($ty) ,"`]",$($tyalias,)?" type")]
+            pub type $Rty = $ty;
+
+            crate::macros::cond_eval!{($($RCodeVal)?) use $self::$define::$RCode;}
+            impl $trait for $Rty { #[doc=core::concat!("[`SEXP`] type of R [`",core::stringify!($Rty), "`] type is ",stringify!($RCode))] const $SEXPTYPE:$SEXPTYPE=$RCode; }
+            $(impl $extraTrait for $Rty {})*
+        )*
+        /// R [`SEXPTYPE`] constants
+        pub mod $define {
+            use $self::$alias::*;
+            $($(
+                #[doc=core::concat!(" R [`",core::stringify!($Rty),"`] type")] pub const $RCode: $self::$SEXPTYPE = $RCodeVal;
+            )?)*
+        }
+        /// R type aliases
+        pub mod $alias {
+            $(
+                #[doc(inline)] pub use $self::$Rty;
+            )*
+        }
+    }
 }
 use macros::{RTypeMatrix, trait_def};
 trait_def!(
@@ -118,13 +134,18 @@ Copy
         unsafe { DATAPTR(s) as *mut Self::Data }
     }
 }
-for RTypeMatrix { SEXPTYPE }
-    ():"(unit)", NULL, NILSXP 0 { };
-    u8, character, CHARSXP 9 { };
-    u32, logical, LGLSXP  10 {RDefault RTypeMut};
-    i32, integer, INTSXP  13 {RDefault RTypeMut};
-    f64, numeric, REALSXP 14 {RDefault RTypeMut};
-    SEXP, list, VECSXP 19 {RDefault RTypeMut};
+for RTypeMatrix { SEXPTYPE alias define self }
+    ():"(unit)", NULL, NILSXP=0 { };
+    u8, character, CHARSXP=9 { };
+    u32, logical, LGLSXP =10 {RDefault RTypeMut};
+    i32, integer, INTSXP =13 {RDefault RTypeMut};
+    f64, numeric, REALSXP=14 {RDefault RTypeMut};
+    SEXP, list, VECSXP=19 {RDefault RTypeMut};
+    Sexp<numeric>:"(Sexp)", numeric_list, VECSXP {RDefault RTypeMut};
+    Sexp<integer>:"(Sexp)", integer_list, VECSXP {RDefault RTypeMut};
+    Sexp<logical>:"(Sexp)", logical_list, VECSXP {RDefault RTypeMut};
+    Sexp<character>:"(Sexp)", character_list, VECSXP {RDefault RTypeMut};
+    // Sexp<list>:"(Sexp)", list_list, VECSXP {RDefault RTypeMut};
 );
 
 /// Indicate whether a [`RType`] could be allocate by default
@@ -258,11 +279,11 @@ impl SEXPext for SEXP {
 /// To be specific, at the end of an FFI call, after call drop
 /// to anything you could call.
 /// Otherwise, memory leak may happens by the longjmp instruction in the R internal `Rf_error` function.
-pub fn error(message:*const character)->!{
+pub unsafe fn error(message:*const character)->!{
     unsafe { Rf_error(message as *const c_char) }
-    // if self.stype() != character::SEXPTYPE {
-    //     Rf_error("attempt to call error with non-character type!\0".as_ptr() as *const c_char);
-    // } else {
-    //     Rf_error(character::data(self) as *const c_char)
-    // }
+}
+/// print function used in `no_std` mode, for `std` user, println! should be better.
+#[cfg_attr(doc,doc(cfg(not(feature="std"))))] #[cfg(not(feature="std"))]
+pub unsafe fn print(message:*const character){
+    unsafe { Rprintf(message as *const c_char) }
 }

@@ -3,9 +3,11 @@
 /// Should be invisible for users
 #[path = "base.s.r-type.rs"]
 pub mod r_type;
-use r_type::{RType, RTypeMut, RDefault, RTypeFrom, error, logical, integer, character, numeric, NULL, list, SEXPext, SEXP, SEXPTYPE};
+use r_type::{RType, RTypeMut, RDefault, RTypeFrom, error, alias::*, SEXPext, SEXP, SEXPTYPE};
+#[cfg(not(feature="std"))]
+use r_type::print;
 #[cfg(doc)]
-use r_type::CHARSXP; // for doc;
+use r_type::define::*; // for doc;
 /// impl Index and IndexMut for a type.
 pub mod macros {
     /// internal impl.
@@ -315,6 +317,14 @@ impl Owned<character> {
     /// see [`error`] for more informations.
     pub unsafe fn error(self)->!{
         unsafe {error(character::data(self.as_sexp()))}
+    }
+    #[cfg_attr(doc, doc(cfg(not(feature = "std"))))] #[cfg(not(feature = "std"))]
+    /// print the content to R... with R's print function. Only available in no_std mode
+    ///
+    /// For std user, Rust builtin [`println!`]() could be better.
+    pub fn print(self){
+        // SAFETY: ffi calls, the input type is character with `\0` terminator, thus is OK.
+        unsafe {print(character::data(self.as_sexp()))}
     }
 }
 impl_sext_index! {SExt=SExt SEXP=SEXP RType=RType RTypeMut=RTypeMut Mutable=Mutable, Sexp Owned Protected}
