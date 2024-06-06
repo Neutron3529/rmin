@@ -30,8 +30,8 @@ pub const cetype_t_CE_UTF8: u32 = 1;
 // pub type Rboolean = u32;
 #[link(name = "R", kind = "dylib")]
 extern "C-unwind" {
-    // fn Rf_errorcall(call:SEXP, error: *const c_char, ...) -> !; // avoid the possible copy.
-    pub fn Rf_error(error: *const c_char) -> !;
+    pub fn Rf_errorcall(call:SEXP, error: *const c_char, ...) -> !; // avoid the possible copy.
+    // pub fn Rf_error(error: *const c_char, ...) -> !;
     pub fn Rf_mkCharLenCE(
         data: *const c_char,
         len: c_int,
@@ -40,7 +40,8 @@ extern "C-unwind" {
 }
 #[link(name = "R", kind = "dylib")]
 extern "C" {
-    // pub static mut R_CurrentExpression: SEXP;
+    // pub fn Rf_getCurrentCall() -> SEXP;
+    pub static mut R_CurrentExpression: SEXP;
     #[doc = "These are the public inlinable functions that are provided in\nRinlinedfuns.h It is *essential* that these do not appear in any\nother header file, with or without the Rf_ prefix."]
     pub fn Rf_allocVector(arg1: SEXPTYPE, arg2: R_xlen_t) -> SEXP;
     pub fn Rf_protect(arg1: SEXP) -> SEXP;

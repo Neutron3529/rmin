@@ -291,10 +291,14 @@ impl SEXPext for SEXP {
 /// to anything you could call.
 /// Otherwise, memory leak may happens by the longjmp instruction in the R internal `Rf_error` function.
 pub unsafe fn error(message:*const character)->!{
-    unsafe { Rf_error(message as *const c_char) }
+    unsafe { Rf_errorcall(lib_r::R_CurrentExpression, FMT, message as *const c_char) }
 }
 /// print function used in `no_std` mode, for `std` user, println! should be better.
 #[cfg_attr(doc,doc(cfg(not(feature="std"))))] #[cfg(not(feature="std"))]
 pub unsafe fn print(message:*const character){
-    unsafe { Rprintf(message as *const c_char) }
+    // SAFETY: FMT is add to ensure the code is well-encoded
+    unsafe { Rprintf(FMT, message as *const c_char) }
 }
+
+/// formatter avoid %s being translated.
+pub const FMT:*const c_char=b"%s\0" as *const u8 as *const c_char;

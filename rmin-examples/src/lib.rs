@@ -46,14 +46,14 @@ pub extern "C" fn panic(a:Sexp<i32>) -> Owned<f64> {
         struct Guard();
         impl Drop for Guard {
             fn drop(&mut self){
-                println!("Guard dropped.")
+                println!("%Guard dropped%.")
             }
         }
         let g=Guard();
         if a.missing() {
-            panic!("error occurs.")
+            panic!("%error occurs%d.")
         }
-        println!("{g:?} is still alive, a.missing is {}, ", a.missingness());
+        println!("{g:?} is still alive, %a.missing is {}%, ", a.missingness());
         Sexp::raw(0)
     })
 }

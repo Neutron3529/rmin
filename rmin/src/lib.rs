@@ -1,6 +1,5 @@
-# rmin
-
-## rmin - A minimal Rust lib for writting R extensions
+/*!
+# rmin - A minimal Rust lib for writting R extensions
 
 This is a very early version, only support vector type, and thus its overhead is minimized.
 
@@ -8,13 +7,13 @@ Compare to the well-knowned `rextendr`, This crate although with some limitation
 
 Since it is small enough, you could vendor this crate easily into your CRAN package easily.
 
-## Status
+# Status
 
 The recent usable version is v0.3.1, DO NOT USE THE GIT VERSION
 
 Please notice that, I am not familar with switching branches, the commit directly into the main branch is highly untrustable. Github is a repo only
 
-## Upcoming breaking changes in v0.4.0:
+# Upcoming breaking changes in v0.4.0:
 
 [`character`] re-bind to [`Sexp<char>`], which has [`SEXPTYPE`] binds to [`STRSXP`](Rdef::STREXP)
 
@@ -22,45 +21,45 @@ The current [`character`] binding moves to [`char`], since R tells me the return
 
 adding an extra '%s\0' to printf and rf_errorcall, which prevent formating errors
 
-## Features
+# Features
 
 Need at least one of these feature: `cfg-if`(for no_std environment) or `std`(for normal usage).
 
 <details>
 <summary>Details:</summary>
 
-## `panic-info-message`
+# `panic-info-message`
 
 Enable rust feature `panic_info_message`, will bring Rust panic messages back to R, might be useful for debugging. Enabled by default.
 
-## `std`
+# `std`
 
 Most of the rust crates are rely on `std::*`, if you want to use other crate, you should enable this feature. It takes ~1s compile the whole crate without `lto`, but if you enable `lto` for a faster executing speed, it might takes ~5s to finish compiling it.
 
-## `public-all`
+# `public-all`
 
 The most evil and dangerous feature. Better not to enable it. Most of the useful functions have a marker feature named `public-by-default-even-public-all-is-not-set`, that feature is a marker feature, do nothing but only tells you what function you could obtain from [`prelude`] module.
 
-## `min-import`
+# `min-import`
 
 For [`prelude`] module. Since all the [`RType`](base::s::r_type::RType) aliases could be access from [`crate::prelude::R`], this feature disable import the aliases into [`prelude`] module.
 
-## `cfg-if`
+# `cfg-if`
 
 Enable by default since compile the exception handling functtion for `no_std` environment need `cfg-if`. If you are using `std` feature, this could be disabled.
 
-## `public-by-default-even-public-all-is-not-set`
+# `public-by-default-even-public-all-is-not-set`
 
 Dummy feature. Nothing happens if you disable it with `--no-default-feature`.
 
 </details>
 
-## Note
+# Note
 
 Please switch to [`prelude`] module page for a first glance, since I want to show all docs, most of the private things are documented with a `public-all` feature flag.
 Please do not use them directly since most of them have a safe wrapper, and it is dangerous to use them directly.
 
-## Usage
+# Usage
 
 Version 0.1.0 provides a fastest (but ugly) way to achieve about 2x speedup on with functions. They are discarded in 0.2.* since they are really unsafe and may cause memory leak.
 
@@ -68,11 +67,11 @@ The currently 0.3.0 version is slightly different from 0.2.0, which rename `SEXP
 
 Note: In the upcoming 0.4.0, all the decl_macro might be moved into a seperate crate which provide macros and proc_macros. This might only affect users with default no_std environment.
 
-### 0.3.0, bring `#[no_std]` back!
+## 0.3.0, bring `#[no_std]` back!
 
 In 0.3.0, feature `std` is optional again, which will give us a faster code generating speed.
 
-#### Changes:
+### Changes:
 
 1. \[ x \] currently, new method and from (rust type) method goes to SExt, you could still write [`Owned<T>`]`::`[`new`](crate::prelude::Owned::new)`()`, but a [`Protected<T>`](crate::base::s::Protected) yields.
 2. \[ x \] Add a [`catch_unwind`](crate::base::no_std::unwind::catch_unwind) for `no_std`.
@@ -80,8 +79,8 @@ In 0.3.0, feature `std` is optional again, which will give us a faster code gene
 4. \[ x \] Using macro 2.0 to hide most of the struct and method from user interface, but remains the doc for debug purpose.
 5. \[   \] Adding support for lists (partially done.)
 
-#### grammar
-```rust
+### grammar
+```no_run
 #![no_std]
 use rmin::*;
 /// Return a+b to R.
@@ -116,3 +115,125 @@ The program above could be tested with test command
 ```bash
 export LOAD="dyn.load('target/release/examples/libcompare_rmin.so');addnp=getNativeSymbolInfo('add_noprotect');addp=getNativeSymbolInfo('add_protect');panic=getNativeSymbolInfo('panic')" ; LC_ALL=C r -e "$LOAD;system.time(sapply(1:100000,function(x)tryCatch(.Call(wrap__panic),error=I)))" 2>/dev/null ; LC_ALL=C r -e "$LOAD;system.time(sapply(1:1000000,function(x).Call(addp,1.,2.)));system.time(sapply(1:1000000,function(x).Call(addp,1.,2.)))"
 ```
+*/
+#![cfg_attr(not(feature = "std"),
+    feature(lang_items, rustc_attrs, core_intrinsics, panic_unwind, std_internals, strict_provenance, exposed_provenance),
+    // feature(c_unwind,impl_trait_in_assoc_type),
+    no_std
+)]
+
+#![cfg_attr(all(not(feature = "std"), feature="panic-info-message"), feature(panic_info_message) )]
+#![feature(decl_macro)]
+#![cfg_attr(any(doc, test), feature(doc_cfg, rustdoc_missing_doc_code_examples))]
+#![warn(
+    missing_docs,
+    rustdoc::missing_crate_level_docs,
+    // rustdoc::missing_doc_code_examples
+)]
+#![allow(internal_features)]
+#![feature(associated_type_defaults)]
+#[cfg(not(feature = "std"))]
+extern crate panic_unwind;
+macro pm {
+    ()=>{},
+    ($(#[$meta:meta])* $pub:ident $mod:tt $item:tt ; $($tt:tt)*) => {
+        $(#[$meta])*
+        #[cfg_attr(doc, doc(cfg(feature="public-all")))]
+        #[cfg(any(doc, feature="public-all"))]
+        $pub $mod $item;
+        $(#[$meta])*
+        #[cfg(not(any(doc, feature="public-all")))]
+        $mod $item;
+        pm!{$($tt)*}
+    },
+    ($(#[$meta:meta])* $pub:ident $mod:tt $item:tt {$($blk:tt)*} $($tt:tt)*) => {
+        $(#[$meta])*
+        #[cfg_attr(doc, doc(cfg(feature="public-all")))]
+        #[cfg(any(doc, feature="public-all"))]
+        $pub $mod $item {$($blk)*}
+        $(#[$meta])*
+        #[cfg(not(any(doc, feature="public-all")))]
+        $mod $item {$($blk)*}
+        pm!{$($tt)*}
+    }
+}
+pm! {
+    /// macros for `no_std` mode.
+    pub mod macros {
+        /// eval things conditionally, used in macros.
+        pub macro cond_eval {
+            (($cond:tt) $($tt:tt)*)=>{$($tt)*},
+            (() $($tt:tt)*)=>{}
+        }
+    }
+    /// Basic module for panic handling.
+    ///
+    /// Note: this module is invisible unless you enable the `public-all` feature gate.
+    ///
+    /// # Example
+    /// ```compile_fail
+    /// use base;
+    /// ```
+    pub mod base;
+}
+
+/// Prelude, the only thing you could (and should) use
+///
+/// Originally, to prevent the misuse of things like putting [`Protected<T>`](crate::base::s::Protected) into a FFI interface, most of the structs are private and hided. And the crate is designed to function just with the visible prelude module.
+///
+/// Currently, a feature gate `public-all` is added, and thus users could see all of the docs, which helps debugging with this crate.
+/// But, since the `public-all` feature gate is added to the base module, all the type are marked as **Available on crate feature `public-all` only**
+///
+/// To really checks what you could use directly, all the doc that prelude imports are inlined, and the prelude crate are marked as **Available on crate feature `always-avaliable-with-prelude-accesses` only.**
+///
+/// Here, `always-avaliable-with-prelude-accesses` is a dummy feature, it is enabled by default and does nothing (thus disable it makes nothing happens). The usage of that feature is that, when you see that feature,
+/// you could use it without enable `public-all`.
+///
+/// Sometimes, you may obtain *private* things such as [`Protected<T>`](crate::base::s::Protected) (from a [`SExt`]`::<_>::`[`new`](SExt::new)`(_)`), that's OK, since the R ffi does not accept a [`Protected<T>`](crate::base::s::Protected),
+/// and you cannot visit [`Protected<T>`](crate::base::s::Protected) directly without `public-all`, you could only keep that type until rust drop it automatically.
+///
+/// As for normal usage, it make no different to write `use rmin::*` or `use rmin::prelude::*`.
+///
+/// Choose your favorite one:)
+///
+/// # Example
+/// ## 1. use prelude
+/// ```
+/// use rmin::prelude::*;
+/// ```
+/// ## 2. use a shorter version
+/// ```
+/// use rmin::*;
+/// ```
+
+#[cfg_attr(
+    doc,
+    doc(cfg(all(
+        feature = "public-by-default-even-public-all-is-not-set",
+        feature = "public-all"
+    )))
+)]
+pub mod prelude {
+    #[doc(inline)]
+    pub use crate::base::{
+        handle_panic,
+        s::{Owned, SExt, Sexp},
+    };
+
+    #[doc(inline)]
+    pub use crate::base::s::r_type::alias as R;
+
+    #[doc(inline)]
+    pub use crate::base::s::r_type::define as Rdef;
+
+    #[doc(inline)]
+    #[cfg(not(feature = "min-import"))]
+    #[cfg_attr(doc, doc(cfg(not(any(doc, feature = "min-import")))))]
+    pub use crate::base::s::r_type::alias::*;
+
+    #[doc(inline)]
+    #[cfg(not(feature = "std"))]
+    #[cfg_attr(doc, doc(cfg(not(any(doc, feature = "std")))))]
+    pub use crate::base::no_std::{String, ToString, Vec, Box, macros::{format, println}};
+}
+pub use prelude::*;

@@ -1,6 +1,6 @@
 [package]
 name = "rmin"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 description = "A minimal Rust lib for writting R extensions"
 authors = ["Neutron3529 <qweytr1@main.ustc.edu.cn>"]
@@ -9,18 +9,13 @@ repository = "https://github.com/Neutron3529/rmin"
 
 
 [features]
-default = ["public-by-default-even-public-all-is-not-set","cfg-if"]
+default = ["public-by-default-even-public-all-is-not-set","cfg-if","panic-info-message"]
 public-by-default-even-public-all-is-not-set = []
 std = []
 public-all = []
 min-import = []
 cfg-if = ["dep:cfg-if"]
 panic-info-message = []
-
-[[example]]
-name = "compare-rmin"
-crate-type = ["cdylib"]
-required-features = []
 
 [dependencies]
 cfg-if = { version = "1.0.0", optional = true }
