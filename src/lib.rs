@@ -33,9 +33,8 @@
 //! Version 0.1.0 provides a fastest (but ugly) way to achieve about 2x speedup on with functions. They are discarded in 0.2.* since they are really unsafe and may cause memory leak.
 //!
 //! The currently 0.3.0 version is slightly different from 0.2.0, which rename `SEXP<T>` to [`Sexp<T>`], and (will) support things like [`Sexp`]<[`numeric_list`]>(R::numeric_list) or even an arbitrary list `Sexp<(T1,T2)>`.
-//! Since renaming breaks the current symver, I'll delay the publishing of 0.3.0
 //!
-//! I cannot ensure whether the api will change again in the future, but the api seems to be stable.
+//! Note: In the upcoming 0.4.0, all the decl_macro might be moved into a seperate crate which provide macros and proc_macros. This might only affect users with default no_std environment.
 //!
 //! ## 0.3.0, bring `#[no_std]` back!
 //!
