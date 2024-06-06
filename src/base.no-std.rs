@@ -1,11 +1,14 @@
 use crate::{R::character, base::s::{Sexp, SExt, r_type::lib_r::{R_chk_calloc, R_chk_free, R_chk_realloc}}};
 use macros::*;
-use core::{fmt::Write, ffi::c_void, any::Any, panic::PanicPayload, convert::AsRef};
+use core::{ffi::c_void, any::Any, panic::PanicPayload};
+#[cfg(not(test))]
+use core::fmt::Write; // for panic panic_handler
 
 extern crate alloc;
 use alloc::alloc::{GlobalAlloc, Layout};
 pub use alloc::{string::{String, ToString}, vec::Vec, boxed::Box};
 
+/// load unwind related functions, should not use in production.
 #[path = "base.no-std.unwind.rs"]
 pub mod unwind;
 
@@ -70,6 +73,8 @@ unsafe impl GlobalAlloc for SimpleAllocator {
         unsafe { R_chk_realloc(ptr as *mut c_void, new_size) as *mut u8 }
     }
 }
+
+#[cfg(not(test))]
 #[panic_handler]
 fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     // print errors.
@@ -82,6 +87,7 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
         } else {
             write!(&mut message, "panic occurred:").expect(REASON)
         }
+        #[cfg(feature="panic-info-message")]
         if let Some(i) = info.message() {
             if let Some(s) = info.payload().downcast_ref::<&str>() {
                 write!(&mut message," {i} ({s})").expect(REASON)
@@ -92,7 +98,7 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
         if let Some(i) = info.location() {
             write!(
                 &mut message,
-                "\n  at {}, line {}, column {}.\nNote: This panic omits some deconstructor and may cause memory leak, please restart R as soon as possible to avoid further issues.",
+                "\n  at {}, line {}, column {}.",
                 i.file(),
                     i.line(),
                     i.column(),
@@ -103,7 +109,7 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     };
 
     let reason = unsafe {panic_unwind::__rust_start_panic(&mut RewrapBox(Box::new(charsxp)))};
-    println!("Unhandled panic occurred, may cause memory leak, be caution! reason = {}",reason);
+    println!("Unhandled panic occurred, may cause memory leak, be caution!\nNote: This panic omits some deconstructor and may cause memory leak, please restart R as soon as possible to avoid further issues.\n  panic_unwind::reason = {}",reason);
     unsafe {
         charsxp.error();
     }

@@ -70,8 +70,7 @@ impl<T: RType> Owned<T> {
 /// Protected [`SEXP`], should not be transferred across FFI boundary.
 ///
 /// Since return a protected vector back to R will cause memory leak, this struct is marked as private
-/// The interface of [`Proteted<T>`](Self) and [`Owned<T>`] is almost the same (expect [`Owned<character>`] have an extra [`.error()`](Owned::error)
-/// function call that handle error message, but such call is extremely unsafe, you should use [`panic`] instead.)
+/// The interface of [`Proteted<T>`](Self) and [`Owned<T>`] is almost the same, but
 /// for FFI, you should only use
 /// ```
 /// extern "C" fn(Sexp<T1>, Sexp<T2>, ...)->Owned<TRet>
@@ -252,9 +251,21 @@ pub trait SExt: Sized {
         }
     }
 }
-/// marked [`SEXP`] as newable
-pub trait Newable {}
-impl<T: RType> Newable for Owned<T> {}
+impl<T:RType> Sexp<T> {
+    /// indicate whether a sexp is missing, should call manually.
+    /// This function is not provided to [`Owned`] or [`Protected`], since they are allocated by Rust and should not missing.
+    #[inline(always)]
+    pub fn missing(&self) -> bool { // only Sexp may missing.
+        // SAFETY: ffi.
+        self.missingness() != 0
+    }
+    /// wrapper for R `MISSING` function.
+    #[inline(always)]
+    pub fn missingness(&self) -> i32 { // only Sexp may missing.
+        // SAFETY: ffi.
+        unsafe {self.as_sexp().missing() as i32}
+    }
+}
 /// A marker suggeest whether the SEXP is mutable
 ///
 /// Could not obtained manually since it is behind a `macro` invocation

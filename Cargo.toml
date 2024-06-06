@@ -9,12 +9,13 @@ repository = "https://github.com/Neutron3529/rmin"
 
 
 [features]
-default = ["public-by-default-even-public-all-is-not-set","dep:cfg-if"]
+default = ["public-by-default-even-public-all-is-not-set","cfg-if"]
 public-by-default-even-public-all-is-not-set = []
 std = []
 public-all = []
 min-import = []
 cfg-if = ["dep:cfg-if"]
+panic-info-message = []
 
 [[example]]
 name = "compare-rmin"

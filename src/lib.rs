@@ -7,9 +7,26 @@
 //!
 //! Since it is small enough, you could vendor this crate easily into your CRAN package.
 //!
+//! # Features
+//!
+//! Need at least one of these feature: `cfg-if`(for no_std environment) or `std`(for normal usage).
+//!
+//! `std`: Most of the rust crates are rely on `std::*`, if you want to use other crate, you should enable this feature. It takes ~1s compile the whole crate without `lto`, but if you enable `lto` for a faster executing speed, it might takes ~5s to finish compiling it.
+//!
+//! `public-all`: The most evil and dangerous feature. Better not to enable it. Most of the useful functions have a marker feature named `public-by-default-even-public-all-is-not-set`, that feature is a marker feature, do nothing but only tells you what function you could obtain from [`prelude`] module.
+//!
+//! `min-import`: For [`prelude`] module. Since all the [`RType`] aliases could be access from [`crate::prelude::R`], this feature disable import the aliases into [`prelude`] module.
+//!
+//! `panic-info-message`: enable rust feature `panic_info_message`, I suppose it does nothing since I have no idea how to send message in this way.
+//!
+//! `cfg-if`: enable by default since compile the exception handling functtion for `no_std` environment need `cfg-if`. If you are using `std` feature, this could be disabled.
+//!
+//! `public-by-default-even-public-all-is-not-set`: Dummy feature. Nothing happens if you disable it with `--no-default-feature`.
+//!
 //! # Note
 //!
-//! Please switch to [`prelude`] module page for a first glance, here contains all of the doc, which will only be enabled with feature=
+//! Please switch to [`prelude`] module page for a first glance, since I want to show all docs, most of the private things are documented with a `public-all` feature flag.
+//! Please do not use them directly since most of them have a safe wrapper, and it is dangerous to use them directly.
 //!
 //! # Usage
 //!
@@ -27,7 +44,7 @@
 //! ### Changes:
 //!
 //! 1. \[ x \] currently, new method and from (rust type) method goes to SExt, you could still write [`Owned<T>`]`::`[`new`](crate::prelude::Owned::new)`()`, but a [`Protected<T>`](crate::base::s::Protected) yields.
-//! 2. \[ x \] Add a [`catch_unwind`](crate::base::no_std::catch_unwind) for `no_std`.
+//! 2. \[ x \] Add a [`catch_unwind`](crate::base::no_std::unwind::catch_unwind) for `no_std`.
 //! 3. \[ x \] Move `SEXP<T>` to [`Sexp<T>`] thus SEXP and Sexp could be occur in the same situation
 //! 4. \[ x \] Using macro 2.0 to hide most of the struct and method from user interface, but remains the doc for debug purpose.
 //! 5. \[   \] Adding support for lists (partially done.)
@@ -68,28 +85,22 @@
 //! ```bash
 //! export LOAD="dyn.load('target/release/examples/libcompare_rmin.so');addnp=getNativeSymbolInfo('add_noprotect');addp=getNativeSymbolInfo('add_protect');panic=getNativeSymbolInfo('panic')" ; LC_ALL=C r -e "$LOAD;system.time(sapply(1:100000,function(x)tryCatch(.Call(wrap__panic),error=I)))" 2>/dev/null ; LC_ALL=C r -e "$LOAD;system.time(sapply(1:1000000,function(x).Call(addp,1.,2.)));system.time(sapply(1:1000000,function(x).Call(addp,1.,2.)))"
 //! ```
-#![cfg_attr(
-    not(feature = "std"),
-    feature(needs_panic_runtime, rustc_attrs, core_intrinsics, panic_unwind, std_internals, strict_provenance, exposed_provenance),
+#![cfg_attr(not(feature = "std"),
+    feature(lang_items, rustc_attrs, core_intrinsics, panic_unwind, std_internals, strict_provenance, exposed_provenance),
+    // feature(c_unwind,impl_trait_in_assoc_type),
     no_std
 )]
-#![feature(rustdoc_missing_doc_code_examples, decl_macro)]
-#![cfg_attr(doc, feature(doc_cfg))]
+
+#![cfg_attr(all(not(feature = "std"), feature="panic-info-message"), feature(panic_info_message) )]
+#![feature(decl_macro)]
+#![cfg_attr(any(doc, test), feature(doc_cfg, rustdoc_missing_doc_code_examples))]
 #![warn(
     missing_docs,
     rustdoc::missing_crate_level_docs,
     // rustdoc::missing_doc_code_examples
 )]
-#![allow(rustdoc::private_intra_doc_links)] // Protected<T>::sexp is a private field.
-#![allow(unused_imports)]
 #![allow(internal_features)]
-#![feature(
-    lang_items,
-    panic_info_message,
-    c_unwind,
-    associated_type_defaults,
-    impl_trait_in_assoc_type
-)]
+#![feature(associated_type_defaults)]
 #[cfg(not(feature = "std"))]
 extern crate panic_unwind;
 macro pm {

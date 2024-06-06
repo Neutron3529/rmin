@@ -3,8 +3,10 @@
 pub mod lib_r;
 use lib_r::*;
 pub use lib_r::{SEXP, SEXPTYPE};
-use core::ffi::c_char;
-use super::{SExt, Sexp, Owned, Protected}; // for doc generations
+use core::ffi::{c_int, c_char};
+use super::Sexp;
+#[cfg(doc)]
+use super::{SExt, Owned, Protected}; // for doc generations
 /// macros for define additional RType, for crate developer only.
 pub mod macros {
     // pub macro RType(RType=$RType:tt SEXPTYPE=$SEXPTYPE:tt R_xlen_t=$R_xlen_t:tt Rf_allocVector=$Rf_allocVector:tt SEXP=$SEXP:tt, ty=$ty:tt Rty=$Rty:tt RCODE=$RCODE:tt=$RCODEVAL:tt){
@@ -42,6 +44,7 @@ pub mod macros {
         )*
         /// R [`SEXPTYPE`] constants
         pub mod $define {
+            #[cfg(doc)]
             use $self::$alias::*;
             $($(
                 #[doc=core::concat!(" R [`",core::stringify!($Rty),"`] type")] pub const $RCode: $self::$SEXPTYPE = $RCodeVal;
@@ -201,7 +204,7 @@ impl RTypeFrom for character {
         // SAFETY: ffi call.
         unsafe { Rf_mkCharLenCE(
             data.as_ptr() as *const c_char,
-            data.len() as core::ffi::c_int,
+            data.len() as c_int,
             cetype_t_CE_UTF8
         )}
     }
@@ -241,6 +244,10 @@ pub trait SEXPext:Copy {
     /// SAFETY: this function should be safe, but the previous function `*.as_sexp()` could be unsafe.
     /// Mark it as unsafe since using `[SExt::len]` might be better.
     unsafe fn len(self) -> R_xlen_t;
+
+    /// get whether self is missing.
+    /// it seems that, return 0 means the value is not missing, but I'm not sure.
+    unsafe fn missing(self) -> c_int;
 }
 impl SEXPext for SEXP {
     #[inline(always)]
@@ -261,6 +268,10 @@ impl SEXPext for SEXP {
     #[inline(always)]
     unsafe fn len(self) -> R_xlen_t {
         unsafe { Rf_xlength(self) }
+    }
+    #[inline(always)]
+    unsafe fn missing(self) -> c_int {
+        unsafe { MISSING(self) }
     }
 }
 

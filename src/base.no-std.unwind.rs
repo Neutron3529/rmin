@@ -1,17 +1,19 @@
-use core::{intrinsics, any::Any, ffi::c_void, mem::ManuallyDrop};
+use core::{intrinsics, any::Any, mem::ManuallyDrop};
 use super::Box;
 
-extern crate unwind;
-use unwind as uw;
+// extern crate unwind;
+// use unwind as uw;
 extern crate panic_unwind;
 use panic_unwind::__rust_panic_cleanup;
 
 pub mod personality;
 // #[lang ="eh_personality"]
 // pub extern "C" fn eh_personality(){super::println!("eh_personality called");}
-#[no_mangle]
+/// a function just make linker happy.
+#[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn __rust_foreign_exception()->!{super::println!("__rust_foreign_exception called, abort.");core::intrinsics::abort()}
-#[no_mangle]
+/// a function just make linker happy.
+#[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn __rust_drop_panic()->!{super::println!("__rust_drop_panic called, abort.");core::intrinsics::abort()}
 /// almost the same impl in std crate.
 pub unsafe fn catch_unwind<R, F: FnOnce() -> R>(f: F) -> Result<R, Box<dyn Any + Send>> {
