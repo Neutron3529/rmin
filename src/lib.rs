@@ -70,9 +70,8 @@
 //! ```
 #![cfg_attr(
     not(feature = "std"),
-    feature(needs_panic_runtime, rustc_attrs, core_intrinsics, panic_unwind),
-    no_std,
-    needs_panic_runtime
+    feature(needs_panic_runtime, rustc_attrs, core_intrinsics, panic_unwind, std_internals, strict_provenance, exposed_provenance),
+    no_std
 )]
 #![feature(rustdoc_missing_doc_code_examples, decl_macro)]
 #![cfg_attr(doc, feature(doc_cfg))]
@@ -91,7 +90,7 @@
     associated_type_defaults,
     impl_trait_in_assoc_type
 )]
-#[cfg(not(feature="std"))]
+#[cfg(not(feature = "std"))]
 extern crate panic_unwind;
 macro pm {
     ()=>{},
@@ -193,9 +192,6 @@ pub mod prelude {
     #[doc(inline)]
     #[cfg(not(feature = "std"))]
     #[cfg_attr(doc, doc(cfg(not(any(doc, feature = "std")))))]
-    pub use crate::base::{
-        macros::{format, println},
-        no_std::{String, Vec},
-    };
+    pub use crate::base::no_std::{String, ToString, Vec, Box, macros::{format, println}};
 }
 pub use prelude::*;

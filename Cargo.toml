@@ -9,13 +9,17 @@ repository = "https://github.com/Neutron3529/rmin"
 
 
 [features]
-default = ["public-by-default-even-public-all-is-not-set"]
+default = ["public-by-default-even-public-all-is-not-set","dep:cfg-if"]
 public-by-default-even-public-all-is-not-set = []
 std = []
 public-all = []
 min-import = []
+cfg-if = ["dep:cfg-if"]
 
 [[example]]
 name = "compare-rmin"
 crate-type = ["cdylib"]
 required-features = []
+
+[dependencies]
+cfg-if = { version = "1.0.0", optional = true }

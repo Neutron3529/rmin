@@ -311,7 +311,9 @@ impl<T: RType> Drop for Protected<T> {
         unsafe { self.sexp.unprotect() }
     }
 }
-impl Owned<character> {
+unsafe impl Sync for Sexp<character> {}
+unsafe impl Send for Sexp<character> {}
+impl Sexp<character> {
     /// REALLY UNSAFE FUNCTION
     ///
     /// see [`error`] for more informations.
