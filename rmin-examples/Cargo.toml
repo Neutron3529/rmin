@@ -1,0 +1,15 @@
+[package]
+name = "rmin-examples"
+version = "0.4.0"
+edition = "2021"
+description = "A minimal Rust lib for writting R extensions. Here are some useful examples."
+authors = ["Neutron3529 <qweytr1@main.ustc.edu.cn>"]
+license = "AGPL-3.0"
+repository = "https://github.com/Neutron3529/rmin"
+
+
+[features]
+std = ["rmin/std"]
+
+[dependencies]
+rmin = { version = "0.4.0", path = "../rmin" }
