@@ -1,4 +1,3 @@
-#![rmin_macros::show]
 #![cfg_attr(not(feature = "std"), no_std)]
 use rmin::prelude::*;
 #[rmin_macros::show]

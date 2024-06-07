@@ -245,7 +245,7 @@ pub mod prelude {
     #[cfg_attr(doc,doc(cfg(feature = "register-routines")))]
     #[cfg(any(doc, feature = "register-routines"))]
     pub mod reg {
-        pub use crate::base::s::r_type::lib_r::{R_CallMethodDef, R_registerRoutines, DllInfo};
+        pub use crate::base::s::r_type::lib_r::{R_CallMethodDef, R_registerRoutines, DllInfo, R_useDynamicSymbols, R_forceSymbols};
     }
 }
 pub use prelude::*;

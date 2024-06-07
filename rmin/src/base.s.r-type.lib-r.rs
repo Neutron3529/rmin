@@ -81,7 +81,12 @@ extern "C" {
         fortranRoutines: *const c_void,
         externalRoutines: *const c_void
     ) -> c_int;
-
+    #[cfg_attr(doc,doc(cfg(feature = "register-routines")))]
+    #[cfg(any(doc, feature = "register-routines"))]
+    pub fn R_useDynamicSymbols(dll:*mut DllInfo, flag:c_uint)->c_uint;
+    #[cfg_attr(doc,doc(cfg(feature = "register-routines")))]
+    #[cfg(any(doc, feature = "register-routines"))]
+    pub fn R_forceSymbols(dll:*mut DllInfo, flag:c_uint)->c_uint;
     pub static mut R_CurrentExpression: SEXP;
     #[doc = "These are the public inlinable functions that are provided in\nRinlinedfuns.h It is *essential* that these do not appear in any\nother header file, with or without the Rf_ prefix."]
     pub fn Rf_allocVector(arg1: SEXPTYPE, arg2: R_xlen_t) -> SEXP;
