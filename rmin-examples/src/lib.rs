@@ -1,5 +1,7 @@
+#![rmin_macros::show]
 #![cfg_attr(not(feature = "std"), no_std)]
 use rmin::prelude::*;
+#[rmin_macros::show]
 /// Return a+b to R.
 #[no_mangle]
 pub extern "C" fn add_protect(a: Sexp<f64>, b: Sexp<f64>) -> Owned<f64> {

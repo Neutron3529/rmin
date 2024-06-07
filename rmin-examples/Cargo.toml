@@ -13,3 +13,4 @@ std = ["rmin/std"]
 
 [dependencies]
 rmin = { version = "0.4.0", path = "../rmin" }
+rmin-macros = { version = "0.1.0", path = "../rmin-macros" }
