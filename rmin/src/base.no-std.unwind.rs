@@ -6,7 +6,8 @@ use super::Box;
 extern crate panic_unwind;
 use panic_unwind::__rust_panic_cleanup;
 
-pub mod personality;
+extern crate rmin_eh;
+// pub mod personality; // switched to rmin_eh
 // #[lang ="eh_personality"]
 // pub extern "C" fn eh_personality(){super::println!("eh_personality called");}
 /// a function just make linker happy.

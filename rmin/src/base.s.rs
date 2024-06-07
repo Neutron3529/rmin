@@ -4,7 +4,7 @@
 #[path = "base.s.r-type.rs"]
 pub mod r_type;
 use r_type::{RType, RTypeMut, RDefault, RTypeFrom, error, alias::*, SEXPext, SEXP, SEXPTYPE};
-#[cfg(not(feature="std"))]
+#[cfg(not(have_std))]
 use r_type::print;
 #[cfg(doc)]
 use r_type::define::*; // for doc;
@@ -87,7 +87,7 @@ pub struct Protected<T: RType> {
 pub trait SExt: Sized {
     /// [`SEXP`] Associated data
     ///
-    /// normally [`numeric`]->[`f64`], [`integer`]->[`i32`], [`logical`]->[`u32`], [`character`]->[`u8`], [`NULL`]->[`()`](unit) and [`SEXP`]->[`list`]
+    /// normally [`numeric`]->[`f64`], [`integer`]->[`i32`], [`logical`]->[`u32`], [`Rchar`]->[`u8`], [`NULL`]->[`()`](unit) and [`SEXP`]->[`list`]
     ///
     /// check impls of [`RType`] for the full supported list
     type Data: RType;
@@ -162,6 +162,25 @@ pub trait SExt: Sized {
             _marker: [],
         }
     }
+
+    // /// Create a list like object
+    // ///
+    // /// The returned pointer is unprotected.
+    // unsafe fn from_protected(data: Protected<Self::Data>) -> (Owned<Sexp<<Self as SExt>::Data>>, Protected<Self::Data>)
+    // where
+    // Self::Data: RTypeFrom,
+    // Sexp<<Self as SExt>::Data>:RDefault+RTypeMut,
+    // Sexp<<Self as SExt>::Data> : AsRef<<Sexp<<Self as SExt>::Data> as RType>::Data>,
+    // [Sexp<<Self as SExt>::Data>] : AsRef<[<Sexp<<Self as SExt>::Data> as RType>::Data]>
+    // {
+    //     let sexp = unsafe { Sexp::<<Self as SExt>::Data>{ sexp:data.as_sexp(),_marker:[] }};
+    //     (Owned::<Sexp<Self::Data>> {
+    //         // <Sexp<<Self as s::SExt>::Data> as RType>::Data
+    //         // Sexp<<Self as s::SExt>::Data>
+    //         sexp: unsafe {<Sexp<Self::Data> as RType>::from([sexp].as_slice())},
+    //         _marker: [],
+    //     },data)
+    // }
 
     /// check whether the data has the desired type
     #[inline(always)]
@@ -322,22 +341,24 @@ impl<T: RType> Drop for Protected<T> {
         unsafe { self.sexp.unprotect() }
     }
 }
-unsafe impl Sync for Sexp<character> {}
-unsafe impl Send for Sexp<character> {}
-impl Sexp<character> {
+unsafe impl Sync for Sexp<Rchar> {}
+unsafe impl Send for Sexp<Rchar> {}
+impl Sexp<Rchar> {
     /// REALLY UNSAFE FUNCTION
     ///
     /// see [`error`] for more informations.
     pub unsafe fn error(self)->!{
-        unsafe {error(character::data(self.as_sexp()))}
+        unsafe {error(Rchar::data(self.as_sexp()))}
     }
-    #[cfg_attr(doc, doc(cfg(not(feature = "std"))))] #[cfg(not(feature = "std"))]
     /// print the content to R... with R's print function. Only available in no_std mode
     ///
     /// For std user, Rust builtin [`println!`]() could be better.
+
+    #[cfg_attr(doc, doc(cfg(not(have_std))))]
+    #[cfg(not(have_std))]
     pub fn print(self){
-        // SAFETY: ffi calls, the input type is character with `\0` terminator, thus is OK.
-        unsafe {print(character::data(self.as_sexp()))}
+        // SAFETY: ffi calls, the input type is Rchar with `\0` terminator, thus is OK.
+        unsafe {print(Rchar::data(self.as_sexp()))}
     }
 }
 impl_sext_index! {SExt=SExt SEXP=SEXP RType=RType RTypeMut=RTypeMut Mutable=Mutable, Sexp Owned Protected}

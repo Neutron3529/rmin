@@ -17,7 +17,7 @@ Please notice that, I am not familar with switching branches, the commit directl
 
 [`character`] re-bind to [`Sexp<char>`], which has [`SEXPTYPE`] binds to [`STRSXP`](Rdef::STREXP)
 
-The current [`character`] binding moves to [`char`], since R tells me the returned [`CHARSXP`] type has the name
+The v0.3.0 [`character`] binding moves to [`Rchar`], since R tells me the returned [`CHARSXP`](Rdef::CHARSXP) type has the name
 
 adding an extra '%s\0' to printf and rf_errorcall, which prevent formating errors
 
@@ -43,6 +43,10 @@ The most evil and dangerous feature. Better not to enable it. Most of the useful
 # `min-import`
 
 For [`prelude`] module. Since all the [`RType`](base::s::r_type::RType) aliases could be access from [`crate::prelude::R`], this feature disable import the aliases into [`prelude`] module.
+
+# `register-routines`
+
+Register R routines, mainly for macros since hand writting such thing is painful.
 
 # `cfg-if`
 
@@ -73,11 +77,11 @@ In 0.3.0, feature `std` is optional again, which will give us a faster code gene
 
 ### Changes:
 
-1. \[ x \] currently, new method and from (rust type) method goes to SExt, you could still write [`Owned<T>`]`::`[`new`](crate::prelude::Owned::new)`()`, but a [`Protected<T>`](crate::base::s::Protected) yields.
-2. \[ x \] Add a [`catch_unwind`](crate::base::no_std::unwind::catch_unwind) for `no_std`.
-3. \[ x \] Move `SEXP<T>` to [`Sexp<T>`] thus SEXP and Sexp could be occur in the same situation
-4. \[ x \] Using macro 2.0 to hide most of the struct and method from user interface, but remains the doc for debug purpose.
-5. \[   \] Adding support for lists (partially done.)
+1. - [x] currently, new method and from (rust type) method goes to SExt, you could still write [`Owned<T>`]`::`[`new`](crate::prelude::Owned::new)`()`, but a [`Protected<T>`](crate::base::s::Protected) yields.
+2. - [x] Add a [`catch_unwind`](crate::base::no_std::unwind::catch_unwind) for `no_std`.
+3. - [x] Move `SEXP<T>` to [`Sexp<T>`] thus SEXP and Sexp could be occur in the same situation
+4. - [x] Using macro 2.0 to hide most of the struct and method from user interface, but remains the doc for debug purpose.
+5. - [ ] Adding support for lists (partially done.)
 
 ### grammar
 ```no_run
@@ -116,13 +120,13 @@ The program above could be tested with test command
 export LOAD="dyn.load('target/release/examples/libcompare_rmin.so');addnp=getNativeSymbolInfo('add_noprotect');addp=getNativeSymbolInfo('add_protect');panic=getNativeSymbolInfo('panic')" ; LC_ALL=C r -e "$LOAD;system.time(sapply(1:100000,function(x)tryCatch(.Call(wrap__panic),error=I)))" 2>/dev/null ; LC_ALL=C r -e "$LOAD;system.time(sapply(1:1000000,function(x).Call(addp,1.,2.)));system.time(sapply(1:1000000,function(x).Call(addp,1.,2.)))"
 ```
 */
-#![cfg_attr(not(feature = "std"),
+#![cfg_attr(not(have_std),
     feature(lang_items, rustc_attrs, core_intrinsics, panic_unwind, std_internals, strict_provenance, exposed_provenance),
     // feature(c_unwind,impl_trait_in_assoc_type),
     no_std
 )]
 
-#![cfg_attr(all(not(feature = "std"), feature="panic-info-message"), feature(panic_info_message) )]
+#![cfg_attr(all(not(have_std), feature="panic-info-message"), feature(panic_info_message) )]
 #![feature(decl_macro)]
 #![cfg_attr(any(doc, test), feature(doc_cfg, rustdoc_missing_doc_code_examples))]
 #![warn(
@@ -132,7 +136,8 @@ export LOAD="dyn.load('target/release/examples/libcompare_rmin.so');addnp=getNat
 )]
 #![allow(internal_features)]
 #![feature(associated_type_defaults)]
-#[cfg(not(feature = "std"))]
+
+#[cfg(not(have_std))]
 extern crate panic_unwind;
 macro pm {
     ()=>{},
@@ -232,8 +237,15 @@ pub mod prelude {
     pub use crate::base::s::r_type::alias::*;
 
     #[doc(inline)]
-    #[cfg(not(feature = "std"))]
-    #[cfg_attr(doc, doc(cfg(not(any(doc, feature = "std")))))]
+    #[cfg(not(have_std))]
+    #[cfg_attr(doc, doc(cfg(not(any(doc, have_std)))))]
     pub use crate::base::no_std::{String, ToString, Vec, Box, macros::{format, println}};
+
+    /// a simple (re-exported) module for R routines registration.
+    #[cfg_attr(doc,doc(cfg(feature = "register-routines")))]
+    #[cfg(any(doc, feature = "register-routines"))]
+    pub mod reg {
+        pub use crate::base::s::r_type::lib_r::{R_CallMethodDef, R_registerRoutines, DllInfo};
+    }
 }
 pub use prelude::*;

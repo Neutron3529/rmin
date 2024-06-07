@@ -4,12 +4,12 @@
 pub mod s;
 
 #[cfg_attr(doc, doc(inline, cfg(all())))]
-#[cfg(not(feature = "std"))]
+#[cfg(not(have_std))]
 pub use no_std::handle_panic;
 
 
-#[cfg(feature = "std")]
-use crate::{Sexp, SExt, R::character};
+#[cfg(have_std)]
+use crate::{Sexp, SExt, R::Rchar};
 
 /// The most common function that may use close to the FFI boundary.
 /// This function could catch all possible panic and convert them into normal R error message.
@@ -22,9 +22,9 @@ use crate::{Sexp, SExt, R::character};
 /// });
 /// ```
 #[cfg_attr(doc, doc(cfg(all())))]
-#[cfg(feature = "std")]
+#[cfg(have_std)]
 pub fn handle_panic<R, F: FnOnce() -> R + std::panic::UnwindSafe>(f: F) -> R {
-    let thing:Sexp<character> = match std::panic::catch_unwind(f) {
+    let thing:Sexp<Rchar> = match std::panic::catch_unwind(f) {
         Ok(ret) => return ret,
         Err(info) => match info.downcast::<String>() {
             Ok(string)=>Sexp::raw_from(format!("{:?}",string)),
@@ -34,7 +34,7 @@ pub fn handle_panic<R, F: FnOnce() -> R + std::panic::UnwindSafe>(f: F) -> R {
     unsafe {thing.error()}
 }
 /// no_std aux functions, for internal procedure only.
-#[cfg(not(feature = "std"))]
-#[cfg_attr(doc, doc(cfg(not(feature = "std"))))]
+#[cfg(not(have_std))]
+#[cfg_attr(doc, doc(cfg(not(have_std))))]
 #[path = "base.no-std.rs"]
 pub mod no_std;

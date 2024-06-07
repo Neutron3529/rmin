@@ -9,8 +9,12 @@
 //!
 //! Additionally, ARM EHABI uses the personality function when generating
 //! backtraces.
+#![no_std]
+#![allow(internal_features)]
+#![feature(lang_items, panic_unwind, std_internals, strict_provenance, exposed_provenance)]
 
 mod dwarf;
+
 
 #[cfg(not(any(test, doctest)))]
 cfg_if::cfg_if! {

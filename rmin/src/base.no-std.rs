@@ -1,4 +1,4 @@
-use crate::{R::character, base::s::{Sexp, SExt, r_type::lib_r::{R_chk_calloc, R_chk_free, R_chk_realloc}}};
+use crate::{R::Rchar, base::s::{Sexp, SExt, r_type::lib_r::{R_chk_calloc, R_chk_free, R_chk_realloc}}};
 use macros::*;
 use core::{ffi::c_void, any::Any, panic::PanicPayload};
 #[cfg(not(test))]
@@ -18,12 +18,12 @@ pub fn handle_panic<R, F: FnOnce() -> R>(f: F) -> R {
         Ok(ret) => return ret,
         Err(info) => // match {info.downcast::<String>()}
         {
-            match info.downcast::<Sexp<character>>(){
+            match info.downcast::<Sexp<Rchar>>(){
                 Ok(charexp)=>*charexp,
                 Err(info)=>Sexp::raw_from(format!("{:?}", info)).into()
             }
-            // Ok(string)=>Owned::<character>::raw_from(format!("{:?}",string)),
-            // Err(info)=>Owned::<character>::raw_from(format!("payload type: {} (panic with no information)",core::any::type_name_of_val(&info)).as_str())
+            // Ok(string)=>Owned::<Rchar>::raw_from(format!("{:?}",string)),
+            // Err(info)=>Owned::<Rchar>::raw_from(format!("payload type: {} (panic with no information)",core::any::type_name_of_val(&info)).as_str())
         }
     };
     unsafe {thing.error()}

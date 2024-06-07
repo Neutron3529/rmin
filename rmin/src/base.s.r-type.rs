@@ -29,10 +29,10 @@ pub mod macros {
     /// wrapper for easily defining the RType implementations
     pub macro RTypeMatrix($trait:tt with {$SEXPTYPE:tt $alias:tt $define:tt $self:tt} for $($ty:ty $(: $tyalias:literal)?, $Rty:tt, $RCode:tt $(=$RCodeVal:tt)? {$($extraTrait:tt)*});*$(;)?) {
         $(
-            // /// bind u8 with R character type (read only!)
+            // /// bind u8 with R Rchar type (read only!)
             // #[doc=core::concat!(" bind [`",core::stringify!($ty),"`] with R [`",core::stringify!($Rty),"`] type")]
             #[allow(non_camel_case_types)]
-            // pub type character = u8;
+            // pub type Rchar = u8;
             #[doc=core::concat!("Data type that an R [`SEXP`] with [`stype`](SEXPext::stype)` == `[`",stringify! ($RCode),"`] "$(,"(",$RCodeVal,")")?," contains.")]
             #[doc=""]
             #[doc=core::concat!("Such [`SEXP`] has R type [`",core::stringify!($Rty), "`] and is defined into Rust [`",core::stringify!($ty) ,"`]",$($tyalias,)?" type")]
@@ -65,7 +65,7 @@ trait_def!(
 /// Since it is defined behind a macro invocation, thus it cannot be touched.
 /// Currently, RType is defined for 4 types:
 ///
-/// [`f64`] (R [`numeric`]), [`i32`] (R [`integer`]), [`u32`] (R [`logical`]) and [`u8`] (R [`character`])
+/// [`f64`] (R [`numeric`]), [`i32`] (R [`integer`]), [`u32`] (R [`logical`]) and [`u8`] (R [`Rchar`])
 ///
 /// [See the full supported list here](#implementors)
 ;
@@ -80,8 +80,8 @@ Copy
     const SEXPTYPE:SEXPTYPE;
     /// indicate the underlying data type.
     type Data:Copy=Self; // For more custom type in case collision happened.
-    // /// parameter that should be sent to `new`. Currently [`R_xlen_t`] for things other than character.
-    // /// For character, a [`String`] is required
+    // /// parameter that should be sent to `new`. Currently [`R_xlen_t`] for things other than Rchar.
+    // /// For Rchar, a [`String`] is required
     /// Allocate a new [`SEXP`] object with default value of length `len`
     ///
     /// SAFETY: You should adding additional marks such as
@@ -139,7 +139,7 @@ Copy
 }
 for RTypeMatrix { SEXPTYPE alias define self }
     ():"(unit)", NULL, NILSXP=0 { };
-    u8, character, CHARSXP=9 { };
+    u8, Rchar, CHARSXP=9 { };
     u32, logical, LGLSXP =10 {RDefault RTypeMut};
     i32, integer, INTSXP =13 {RDefault RTypeMut};
     f64, numeric, REALSXP=14 {RDefault RTypeMut};
@@ -147,7 +147,7 @@ for RTypeMatrix { SEXPTYPE alias define self }
     Sexp<numeric>:"(Sexp)", numeric_list, VECSXP {RDefault RTypeMut};
     Sexp<integer>:"(Sexp)", integer_list, VECSXP {RDefault RTypeMut};
     Sexp<logical>:"(Sexp)", logical_list, VECSXP {RDefault RTypeMut};
-    Sexp<character>:"(Sexp)", character_list, VECSXP {RDefault RTypeMut};
+    Sexp<Rchar>, character, STRSXP=16 {RDefault RTypeMut};
     // Sexp<list>:"(Sexp)", list_list, VECSXP {RDefault RTypeMut};
 );
 
@@ -197,7 +197,7 @@ impl<T:RDefault + RTypeMut> RTypeFrom for T {
     }
 }
 /// allocate a owned R string object from rust String.
-impl RTypeFrom for character {
+impl RTypeFrom for Rchar {
     #[inline(always)]
     unsafe fn from(data: impl core::convert::AsRef<[<Self as RType>::Data]>)->SEXP {
         let data = data.as_ref();
@@ -275,6 +275,7 @@ impl SEXPext for SEXP {
     }
 }
 
+
 /// REALLY UNSAFE FUNCTION
 ///
 /// YOU SHOULD NOT USE IT AT ALL.
@@ -290,12 +291,12 @@ impl SEXPext for SEXP {
 /// To be specific, at the end of an FFI call, after call drop
 /// to anything you could call.
 /// Otherwise, memory leak may happens by the longjmp instruction in the R internal `Rf_error` function.
-pub unsafe fn error(message:*const character)->!{
+pub unsafe fn error(message:*const Rchar)->!{
     unsafe { Rf_errorcall(lib_r::R_CurrentExpression, FMT, message as *const c_char) }
 }
 /// print function used in `no_std` mode, for `std` user, println! should be better.
-#[cfg_attr(doc,doc(cfg(not(feature="std"))))] #[cfg(not(feature="std"))]
-pub unsafe fn print(message:*const character){
+#[cfg_attr(doc,doc(cfg(not(have_std))))] #[cfg(not(have_std))]
+pub unsafe fn print(message:*const Rchar){
     // SAFETY: FMT is add to ensure the code is well-encoded
     unsafe { Rprintf(FMT, message as *const c_char) }
 }

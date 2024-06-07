@@ -76,6 +76,20 @@ fn main() {
     println!("cargo:rustc-env=R_HOME={}", r_paths.r_home.display());
     println!("cargo:r_home={}", r_paths.r_home.display()); // Becomes DEP_R_R_HOME for clients
 
+    // std or core:
+    // #[cfg(feature = "core")]
+    // println!("cargo:rustc-cfg=have_no_std");
+
+    println!("cargo::rustc-check-cfg=cfg(have_std)");
+    #[cfg(not(feature = "core"))]
+    println!("cargo:rustc-cfg=have_std");
+
+
+    #[cfg(all(feature = "std", feature = "core"))]
+    println!("cargo:warning=both `std` and `core` is enabled, enable `core` by default. May affect dependencies.");
+    #[cfg(all(not(feature = "std"), not(feature = "core")))]
+    println!("cargo:warning=neither `std` nor `core` is enabled, enable `std` by default.");
+
     // TODO: r_library might not exist in some types of installation that
     // doesn't provide libR, R's shared library; in such a situation, just skip
     // setting `rustc-link-search`. Probably this setting itself is not used at

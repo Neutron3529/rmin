@@ -1,0 +1,10 @@
+[lib]
+crate-type = ['cdylib']
+
+[package]
+name = "rext"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rmin = { version = "0.4.0", path = "../../../rmin/rmin", features = ["core", "register-routines"] }
