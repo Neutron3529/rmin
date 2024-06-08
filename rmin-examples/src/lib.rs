@@ -80,3 +80,4 @@ pub extern "C" fn panic_with_8MB_resource_allocated(var: Sexp<i32>) -> Owned<i32
 /* R test code
 export LOAD="dyn.load('target/release/examples/libcompare_rmin.so');addnp=getNativeSymbolInfo('add_noprotect');addp=getNativeSymbolInfo('add_protect');panic=getNativeSymbolInfo('panic');pup=getNativeSymbolInfo('protect_and_unprotect');leak=getNativeSymbolInfo('panic_with_8MB_resource_allocated')" ; LC_ALL=C r -e "$LOAD;system.time(sapply(1:100000,function(x)tryCatch(.Call(wrap__panic),error=I)))" 2>/dev/null ; LC_ALL=C r -e "$LOAD;srystem.time(sapply(1:1000000,function(x).Call(addp,1.,2.)));system.time(sapply(1:1000000,function(x).Call(addp,1.,2.)))" ; LC_ALL=C r -e "$LOAD;system.time(.Call(pup,1000L,1000L))" ; LC_ALL=C r -e "$LOAD;system.time(.Call(leak,0L))"
  */
+done!(librmin_examples);
