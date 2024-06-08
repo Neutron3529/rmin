@@ -25,4 +25,4 @@ rmin-macros-camel-ass-wrapper = ["rmin-macros", "rmin-macros/camel-ass"]
 
 [dependencies]
 rmin-eh = { version = "0.0.1", path = "../rmin-eh", optional = true }
-rmin-macros = { version = "0.0.1", path = "../rmin-macros", optional = true }
+rmin-macros = { version = "0.0.2", path = "../rmin-macros", optional = true }
