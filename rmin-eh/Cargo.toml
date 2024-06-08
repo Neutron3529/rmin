@@ -1,3 +1,5 @@
+[lib]
+path = "src/mod.rs"
 [package]
 name = "rmin-eh"
 version = "0.1.0"

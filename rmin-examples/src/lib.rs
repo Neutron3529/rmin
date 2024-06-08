@@ -1,9 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 use rmin::prelude::*;
-#[rmin_macros::show]
+#[export] // rmin::macros::export (or rmin::export with feature rmin-macros enabled)
 /// Return a+b to R.
-#[no_mangle]
-pub extern "C" fn add_protect(a: Sexp<f64>, b: Sexp<f64>) -> Owned<f64> {
+fn add_protect(a: Sexp<f64>, b: Sexp<f64>) -> Owned<f64> {
     handle_panic(|| {
         if a.missing() || b.missing() {
             panic!("Parameter missing detected, a:{} b:{}",a.missing(), b.missing())

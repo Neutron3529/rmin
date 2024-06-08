@@ -36,6 +36,20 @@ Enable rust feature `panic_info_message`, will bring Rust panic messages back to
 
 Most of the rust crates are rely on `std::*`, if you want to use other crate, you should enable this feature. It takes ~1s compile the whole crate without `lto`, but if you enable `lto` for a faster executing speed, it might takes ~5s to finish compiling it.
 
+# `core`
+
+A counter part for `std`, currently `std` is an indicator that just yields a warning while not correctly being specific correctly. This feature controls the linking of exception handling language items, and thus cannot be ignored when enable it.
+
+# `rmin-macros`
+
+Import proc-macros `#[export] fn func_name(...)...{...}` and `done!(crate_name)` into [`rmin::prelude`] and thus avaliable in [`rmin::*`] directly.
+
+Notice that, macros require `rmin::reg` path to work (it is enabled automatically when choosing macros in `rmin` crate, if you enable rmin-macros as an independent dependency, you should enable `rmin::reg` manually.)
+
+## `camel-ass-wrapper`
+
+Internal use only, define the internal name with camel-ass name to avoid name collision.
+
 # `public-all`
 
 The most evil and dangerous feature. Better not to enable it. Most of the useful functions have a marker feature named `public-by-default-even-public-all-is-not-set`, that feature is a marker feature, do nothing but only tells you what function you could obtain from [`prelude`] module.
@@ -247,5 +261,12 @@ pub mod prelude {
     pub mod reg {
         pub use crate::base::s::r_type::lib_r::{R_CallMethodDef, R_registerRoutines, DllInfo, R_useDynamicSymbols, R_forceSymbols};
     }
+    #[doc(inline)]
+    #[cfg_attr(doc,doc(cfg(feature = "rmin-macros")))]
+    #[cfg(any(doc, feature = "rmin-macros"))]
+    pub use rmin_macros::{export, done};
 }
 pub use prelude::*;
+
+#[doc(inline)]
+pub use prelude::{export, done};

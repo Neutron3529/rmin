@@ -1,12 +1,49 @@
 use proc_macro::{*,TokenTree::{*}};
 use std::sync::Mutex;
 use core::{str::FromStr, ops::DerefMut};
-static FUNCS: Mutex<Vec<(String,usize)>> = Mutex::new(Vec::new());
+static FUNCS: Mutex<Vec<Meta>> = Mutex::new(Vec::new());
 
 #[derive(Default)]
 struct Flag(
     // TODO.
 );
+#[derive(Clone)]
+struct Meta {
+    fname:String,
+    params:Vec<[String;2]>
+}
+impl Meta {
+    fn name(&self) -> &str {
+        self.fname.strip_prefix("r#").unwrap_or(&self.fname)
+    }
+    fn safe_name(&self) -> String {
+        #[cfg(feature = "camel-ass")]
+        format!{"_rUST_{}_wRAPPER_" , self.name()}
+        #[cfg(not(feature = "camel-ass"))]
+        format!("_rust_{}_wrapper_" , self.name())
+    }
+    fn unsafe_name(&self) -> String {
+        #[cfg(feature = "camel-ass")]
+        format!{"_rUST_{}_wRAPPER_uNSAFE_" , self.name()}
+        #[cfg(not(feature = "camel-ass"))]
+        format!("_rust_{}_wrapper_unsafe_" , self.name())
+    }
+    fn param(&self) -> String {
+        self.params.iter().map(|x|x[0].clone()).collect::<Vec<_>>().join(", ")
+    }
+    fn param_check(&self) -> String {
+        let res = self.params.iter().map(|x|format!("{}.missing()",x[0])).collect::<Vec<_>>().join(" || ");
+        if res.len() == 0 {
+            return "false".to_string()
+        } else {
+            res
+        }
+    }
+    fn param_check_report(&self) -> String {
+        self.params.iter().map(|x|format!("  missing {}: {{}}",x[0])).collect::<Vec<_>>().join("\n")
+    }
+}
+
 impl Flag {
     fn new()->Self{Default::default()}
     fn flag(&mut self, flag:String){
@@ -16,6 +53,7 @@ impl Flag {
 fn add<T:Into<TokenTree>+Clone>(a:&mut TokenStream, b:&T){
     a.extend(<TokenTree as Into<TokenStream>>::into((b.clone()).into()).into_iter())
 }
+
 
 mod get_name;
 use get_name::get_name;
@@ -46,7 +84,7 @@ pub fn export(attr: TokenStream, item: TokenStream) -> TokenStream {
         // if parsed.len() > 0 {
         //     println!("warning: unknown option keys: [{}]", parsed.into_keys().collect::<Vec<_>>().as_slice().join(", "))
         // }
-        keep.sort_unstable();
+        // keep.sort_unstable();
         println!("attr is {keep:?}");
     }
 
@@ -56,14 +94,11 @@ pub fn export(attr: TokenStream, item: TokenStream) -> TokenStream {
     // before: @ ..... fn name (params) -> out {...}
     let fname = get_name(&mut ret, &mut iter);
     // after : ..... fn name @ (params) -> out {...} // finding the first fn and read name
-    let name = fname.strip_prefix("r#").unwrap_or(&fname);
-    let (safe_name,unsafe_name) = (format!("wrap_{name}_safe"), format!("wrap_{name}_unsafe"));
+    // before:      ... name @ (params) -> out {...}
+    let (sig,params) = get_sig(&mut ret, &mut iter);
+    // after :      ... name (params) -> out @ {...} // finding the first {...}
 
-    // before: ... name @ (params) -> out {...}
-    let (sig,gparam) = get_sig(&mut ret, &mut iter);
-    // after : ... name (params) -> out @ {...} // finding the first {...}
-
-    println!("got name = {name}, sig = `{sig}`, gparam = {gparam:?}");
+    println!("got fn_name = {fname}, sig = `{sig}`, params = {params:?}");
 
     if let Some(wtf) = iter.next() {
         add(&mut ret, &wtf);
@@ -71,12 +106,47 @@ pub fn export(attr: TokenStream, item: TokenStream) -> TokenStream {
         println!("warning, function have the form `fn(..)... {{...}} (unexpected more things)`, keep {wtf:?} as-is.");
     }
 
-    {
-        let mut lck=FUNCS.lock().expect("fatal error: internal errors while writting static variable FUNCS, compile again might help, file an issue might also help.");
-        let full = lck.deref_mut();
-        full.push((safe_name, gparam.len()));
-        full.push((unsafe_name, gparam.len()));
-    }
+    let meta = Meta {
+        fname,
+        params
+    };
+
+    let n = {
+        let mut vec = FUNCS.lock()
+            .expect("fatal error: internal errors while writting static variable FUNCS, compile again might help, file an issue might also help.");
+        let len = vec.deref_mut().len();
+        vec.deref_mut().push(meta.clone());
+        len
+    };
+
+    let fname = &meta.fname;
+    let safe = meta.safe_name();
+    let usafe = meta.unsafe_name();
+    let param = meta.param();
+    let check = meta.param_check();
+    let report = meta.param_check_report();
+    let safe_variant = if check.len()>0 {format!(r#"
+            if {check} {{
+                rmin::handle_panic(||panic!("Parameter missing detected\n{report}", {param}))
+            }} else {{
+                {usafe}_{n}({param})
+            }}"#) } else {format!(r#"
+            {usafe}_{n}({param})"#)};
+
+    let expanded = format!(r#"
+    mod {fname} {{
+        use super::*;
+        #[no_mangle]
+        extern fn {safe}_{n} {sig} {{{safe_variant}
+        }}
+        #[no_mangle]
+        extern fn {usafe}_{n} {sig} {{
+            rmin::handle_panic(||fname({param}))
+        }}
+    }}"#);
+    // println!("expanded to {expanded}");
+    let res = TokenStream::from_str(&expanded).unwrap_or_else(|err|panic!("macro auto expand to {expanded}, there should be an unexpected error: {err:?}. File an issue please."));
+    ret.extend(res);
     ret
 }
 #[proc_macro]
@@ -92,32 +162,36 @@ pub fn done(input: TokenStream) -> TokenStream {
         println!("warning: no fn could be done, abort processing.");
         return Default::default();
     }
-    let dlls=data.iter().map(|(name, cntr)|format!(r#"        ::rmin::reg::R_CallMethodDef {{name:"{name}\0".as_ptr() as *const _, fun:{name} as *const _, numArgs:{cntr}}},
-"#)).collect::<String>();
-    let fns=data.iter().map(|(name, cntr)|format!(r#"        fn {name}({parameters})->rmin::Owned<()>;
-"#, parameters = (0..*cntr).map(|x|format!("arg{x}: Sexp<()>")).collect::<Vec<_>>().as_slice().join(", "))).collect::<String>();
-    let s=format!(r#"mod {mod_name} {{
+    // data.sort_unstable_by(|a,b|a.name.cmp(&b.name));
+    let iter=data.iter().enumerate().map(|(n,x)|(n as isize,x.safe_name(),x.params.len())).chain(data.iter().enumerate().map(|(n,x)|(!(n as isize),x.unsafe_name(),x.params.len())));
+    let dlls=iter.clone().map(|(n,name, cntr)|format!(r#"        R_CallMethodDef {{name:c".{prefix}{cname}".as_ptr(), fun:{name}_{n} as *const _, numArgs: {cntr}}},
+"#,cname = if n<0{!n} else {n}, prefix = if n <0 {"u"} else {"c"})).collect::<String>();
+    let fns=iter.clone().map(|(_,name, cntr)|format!(r#"        fn {name}({parameters})->Owned<()>;
+"#, parameters = (0..cntr).map(|x|format!("arg{x}: Sexp<()>")).collect::<Vec<_>>().as_slice().join(", "))).collect::<String>();
+    let s=format!(r#"mod {mod_name} {{{camel}
+    use ::rmin::{{Sexp, Owned, reg::*}};
+    use ::core::ptr::null;
     extern "C" {{
 {funcs}    }}
-    const R_CALL_METHOD:&[::rmin::reg::R_CallMethodDef]=&[
-{saves}        ::rmin::reg::R_CallMethodDef {{name: ::core::ptr::null(), fun: ::core::ptr::null(), numArgs:0}}
+    const R_CALL_METHOD:&[R_CallMethodDef]=&[
+{saves}        R_CallMethodDef {{name: null(), fun: null(), numArgs: 0}}
     ];
 
     #[no_mangle]
-    extern fn R_init_{name}(info:*mut ::rmin::reg::DllInfo){{
+    extern fn R_init_{name}(info:*mut DllInfo){{
         unsafe {{
-            let res=::rmin::reg::R_registerRoutines(
+            let res=R_registerRoutines(
                 info,
-                ::core::ptr::null(),
+                null(),
                 R_CALL_METHOD.as_ptr(),
-                ::core::ptr::null(),
-                ::core::ptr::null()
+                null(),
+                null()
             );
-            let dynres = ::rmin::reg::R_useDynamicSymbols(info, 0);
-            let force = ::rmin::reg::R_forceSymbols(info, 1);
+            let dynres = R_useDynamicSymbols(info, 0);
+            let force = R_forceSymbols(info, 1);
         }}
     }}
-}}"#,name=crate_name,saves=dlls, funcs=fns, mod_name="_please_do_not_use_rmin_export_interface_as_your_mod_name_");
+}}"#,name=crate_name,saves=dlls, funcs=fns, mod_name="_please_do_not_use_rmin_export_interface_as_your_mod_name_", camel = if cfg!(feature = "camel-ass") {"\n"} else {""});
     println!("finalizer generates:\n{s}");
     TokenStream::from_str(&s).expect("fatal error: internal errors with macro `done`, please disable the `done` macro, and file an issue about that.")
 }

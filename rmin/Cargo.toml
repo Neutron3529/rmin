@@ -9,7 +9,7 @@ repository = "https://github.com/Neutron3529/rmin"
 
 
 [features]
-default = ["public-by-default-even-public-all-is-not-set","core","panic-info-message"]
+default = ["core", "panic-info-message", "rmin-macros", "public-by-default-even-public-all-is-not-set"]
 public-by-default-even-public-all-is-not-set = []
 std = []
 core = ["rmin-eh"]
@@ -18,6 +18,9 @@ min-import = []
 panic-info-message = []
 register-routines = []
 rmin-eh = ["dep:rmin-eh"]
+rmin-macros = ["dep:rmin-macros", "register-routines"]
+camel-ass-wrapper = ["rmin-macros", "rmin-macros/camel-ass"]
 
 [dependencies]
 rmin-eh = { version = "0.1.0", path = "../rmin-eh", optional = true }
+rmin-macros = { version = "0.1.0", path = "../rmin-macros", optional = true }

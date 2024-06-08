@@ -10,4 +10,8 @@ authors = ["Neutron3529 <qweytr1@main.ustc.edu.cn>"]
 license = "AGPL-3.0"
 repository = "https://github.com/Neutron3529/rmin"
 
+[features]
+camel-ass = []
+
 [dependencies]
+
