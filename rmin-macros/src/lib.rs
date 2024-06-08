@@ -32,12 +32,7 @@ impl Meta {
         self.params.iter().map(|x|x[0].clone()).collect::<Vec<_>>().join(", ")
     }
     fn param_check(&self, delim:&str) -> String {
-        let res = self.params.iter().map(|x|format!("{}.missing()",x[0])).collect::<Vec<_>>().join(delim);
-        if res.len() == 0 {
-            return "false".to_string()
-        } else {
-            res
-        }
+        self.params.iter().map(|x|format!("{}.missing()",x[0])).collect::<Vec<_>>().join(delim)
     }
     fn param_check_report(&self) -> String {
         self.params.iter().map(|x|format!("  missing {}: {{}}",x[0])).collect::<Vec<_>>().join("\n")
@@ -124,11 +119,11 @@ pub fn export(attr: TokenStream, item: TokenStream) -> TokenStream {
     let usafe = meta.unsafe_name();
     let param = meta.param();
     let check = meta.param_check(" || ");
-    let check_vals = meta.param_check(", ");
+    let check_vals = meta.param_check(".missing(), ");
     let report = meta.param_check_report();
     let safe_variant = if check.len()>0 {format!(r#"
             if {check} {{
-                rmin::handle_panic(||panic!("Parameter missing detected\n{report}", {check_vals}))
+                rmin::handle_panic(||panic!("Parameter missing detected\n{report}", {check_vals}.missing()))
             }} else {{
                 {usafe}_{n}({param})
             }}"#) } else {format!(r#"

@@ -8,5 +8,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rmin = { version = "0.4.0", path = "../../../../../../rmin/rmin", features = ["register-routines", "rmin-macros", "rmin-macros-verbose"] }
-# rmin-macros = { version = "0.1.0", path = "../../../../../rmin-macros" }
+rmin = { version = "0.4.0-pre", path = "../../../../../../rmin/rmin", features = ["register-routines", "rmin-macros", "rmin-macros-verbose"] }

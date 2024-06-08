@@ -18,7 +18,7 @@ $(STATLIB):
 	fi && \
 		export PATH="$(PATH):$(HOME)/.cargo/bin" && \
 		cargo build --lib --release --manifest-path=./rust/Cargo.toml --target-dir $(TARGET_DIR) && \
-		cp $(STATLIB) .
+		cp $(STATLIB) $(SHLIB)
 	if [ "$(NOT_CRAN)" != "true" ]; then \
 		rm -Rf $(CARGOTMP) && \
 		rm -rf rust/target ; \
