@@ -5,7 +5,7 @@
 pub mod r_type;
 use r_type::{RType, RTypeMut, RDefault, RTypeFrom, error, alias::*, SEXPext, SEXP, SEXPTYPE};
 #[cfg(not(have_std))]
-use r_type::print;
+use {r_type::print, crate::String};
 #[cfg(doc)]
 use r_type::define::*; // for doc;
 /// impl Index and IndexMut for a type.
@@ -359,6 +359,19 @@ impl Sexp<Rchar> {
     pub fn print(self){
         // SAFETY: ffi calls, the input type is Rchar with `\0` terminator, thus is OK.
         unsafe {print(Rchar::data(self.as_sexp()))}
+    }
+}
+
+
+impl Owned<character> {
+    /// simple wrapper for chants that could generate a STRSXP (with length 1) quickly.
+    pub fn raw_from_str(a:impl Into<String>)->Self{
+        Self::raw_from([<Owned<Rchar> as Into<Sexp<Rchar>>>::into(Owned::raw_from(a.into()))])
+    }
+    /// Nothing more than a notation.
+    #[deprecated(since = "0.0.0", note = "Please use `raw_from_str` to ensure you are generate a `raw Owned` rather than `normal protected` type.")]
+    pub fn from_str(a:impl Into<String>)->Self{
+        Self::raw_from_str(a)
     }
 }
 impl_sext_index! {SExt=SExt SEXP=SEXP RType=RType RTypeMut=RTypeMut Mutable=Mutable, Sexp Owned Protected}

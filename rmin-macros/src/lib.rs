@@ -1,4 +1,4 @@
-use proc_macro::{*, Group as SG,TokenTree::{*}};
+use proc_macro::{*,TokenTree::{*}};
 use std::sync::Mutex;
 use core::{str::FromStr, ops::DerefMut};
 static FUNCS: Mutex<Vec<(String,usize)>> = Mutex::new(Vec::new());
@@ -16,6 +16,12 @@ impl Flag {
 fn add<T:Into<TokenTree>+Clone>(a:&mut TokenStream, b:&T){
     a.extend(<TokenTree as Into<TokenStream>>::into((b.clone()).into()).into_iter())
 }
+
+mod get_name;
+use get_name::get_name;
+mod get_sig;
+use get_sig::get_sig;
+
 #[proc_macro_attribute]
 pub fn export(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attr=attr.into_iter().collect::<Vec<_>>();
@@ -34,85 +40,43 @@ pub fn export(attr: TokenStream, item: TokenStream) -> TokenStream {
                     _=> println!("unknown key {}",x[0])
                 }
             }
-        })
-    }
-    keep.sort_unstable();
-    println!("attr is {keep:?}");
+        });
 
-    // TODO: macro attrs
-    // keep=(var1,var2,..)
-    // if parsed.len() > 0 {
-    //     println!("warning: unknown option keys: [{}]", parsed.into_keys().collect::<Vec<_>>().as_slice().join(", "))
-    // }
+        // TODO: parse macro attrs
+        // if parsed.len() > 0 {
+        //     println!("warning: unknown option keys: [{}]", parsed.into_keys().collect::<Vec<_>>().as_slice().join(", "))
+        // }
+        keep.sort_unstable();
+        println!("attr is {keep:?}");
+    }
+
     let mut ret = TokenStream::from_str("#[inline(always)]").expect("FATAL, quote system does not function.");
     let mut iter = item.into_iter();
-    while let Some(x) = iter.next(){
-        add(&mut ret, &x);
-        println!("x = {x:?}");
-        if let Ident(_) = x{
-            if x.to_string() == "fn" {
-                break
-            }
-        }
-    }
 
-    // ..... fn @ name (params) -> out {...}
+    // before: @ ..... fn name (params) -> out {...}
+    let fname = get_name(&mut ret, &mut iter);
+    // after : ..... fn name @ (params) -> out {...} // finding the first fn and read name
+    let name = fname.strip_prefix("r#").unwrap_or(&fname);
+    let (safe_name,unsafe_name) = (format!("wrap_{name}_safe"), format!("wrap_{name}_unsafe"));
 
-    let (fname,safe_name,unsafe_name) = if let Ident(name) = iter.next().expect("need a name after fn") {
-        // fn name
-        let fname = name.to_string();
-        add(&mut ret, &name);
-        let name = fname.strip_prefix("r#").unwrap_or(&fname);
-        (fname, format!("wrap_{name}_safe"), format!("wrap_{name}_unsafe"))
-    } else {
-        panic!("need a name after fn");
-    };
+    // before: ... name @ (params) -> out {...}
+    let (sig,gparam) = get_sig(&mut ret, &mut iter);
+    // after : ... name (params) -> out @ {...} // finding the first {...}
 
-    // ... name @ (params) -> out {...}
-    let group = if let Some(Group(g)) = iter.next(){
-        let mut gparam=g.stream().into_iter().collect::<Vec<_>>().split(|x|if let Punct(y)=x {y.as_char()==','} else {false}).map(|x|{
-            let [name, ty]=x.splitn(2,|x|if let Punct(y)=x {y.as_char()==':'} else {false}).collect::<Vec<_>>()[..] else { panic! ("should have the form `arg: ty`")};
-// TODO: add parameter convertion in v0.5.0 (might with optional features)
-//             if let Ok(_)=keep.binary_search(&name.to_string()) {
-//
-//             }
-            x//.into_iter().cloned().into()
-        }).collect::<Vec<TokenStream>>();
-        // add(&mut ret, &Group::new(Delimiter::Parenthesis, gparam.iter().cloned().into())); //do it later.
-        gparam
-    } else {
-        panic!("need a parameter list after name");
-    };
-    let mut grp: TokenStream = SG::new(Delimiter::Parenthesis, group.iter().cloned().into()).into();
-
-    let fin:SG;
-    while let Some(i) = iter.next() {
-        if let Group(gg)=i {
-            if gg.delimiter() == Delimiter::Brace {
-                fin=gg;
-                break
-            }
-        }
-        add(&mut grp, &i)
-    }
-
-    ret.extend(grp.clone().into_iter());
-    ret.extend(fin);
-
-    println!("got grp = {}",grp.to_string());
+    println!("got name = {name}, sig = `{sig}`, gparam = {gparam:?}");
 
     if let Some(wtf) = iter.next() {
         add(&mut ret, &wtf);
         ret.extend(iter);
-        println!("warning, function have the form `fn(..)... {{...}} (unexpected more things)`, keep as-is.");
+        println!("warning, function have the form `fn(..)... {{...}} (unexpected more things)`, keep {wtf:?} as-is.");
     }
 
     {
-        let full=FUNCS.lock().expect("fatal error: internal errors while writting static variable FUNCS, compile again might help, file an issue might also help.").deref_mut();
-        full.push((safe_name, group.len()));
-        full.push((unsafe_name, group.len()));
+        let mut lck=FUNCS.lock().expect("fatal error: internal errors while writting static variable FUNCS, compile again might help, file an issue might also help.");
+        let full = lck.deref_mut();
+        full.push((safe_name, gparam.len()));
+        full.push((unsafe_name, gparam.len()));
     }
-
     ret
 }
 #[proc_macro]
@@ -133,7 +97,7 @@ pub fn done(input: TokenStream) -> TokenStream {
     let fns=data.iter().map(|(name, cntr)|format!(r#"        fn {name}({parameters})->rmin::Owned<()>;
 "#, parameters = (0..*cntr).map(|x|format!("arg{x}: Sexp<()>")).collect::<Vec<_>>().as_slice().join(", "))).collect::<String>();
     let s=format!(r#"mod {mod_name} {{
-    pub extern "C" {{
+    extern "C" {{
 {funcs}    }}
     const R_CALL_METHOD:&[::rmin::reg::R_CallMethodDef]=&[
 {saves}        ::rmin::reg::R_CallMethodDef {{name: ::core::ptr::null(), fun: ::core::ptr::null(), numArgs:0}}

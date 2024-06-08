@@ -1,7 +1,14 @@
 #![no_std]
 use rmin::*;
+use rmin_macros::*;
+
+#[export]
+fn fine()->Owned<character> {
+    Owned::raw_from_str("im macro fine")
+}
+
 #[no_mangle]
-extern "C" fn test()->*mut core::ffi::c_void{
+extern "C" fn test()->*mut core::ffi::c_void {
     unsafe {SExt::as_sexp(&Sexp::<character>::raw_from([<Owned<Rchar> as Into<Sexp<Rchar>>>::into(Owned::raw_from("im fine."))])) as *mut core::ffi::c_void}
 }
 
@@ -23,3 +30,4 @@ extern fn R_init_rext(info:*mut reg::DllInfo){
         println!("registered with result {res}");
     }
 }
+done!(tests);
