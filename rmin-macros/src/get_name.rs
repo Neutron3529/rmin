@@ -4,7 +4,7 @@ use crate::*;
 pub fn get_name(ret:&mut TokenStream, iter:&mut impl Iterator<Item=TokenTree>)->String {
     while let Some(x) = iter.next(){
         add(ret, &x);
-        println!("x = {x:?}");
+        // println!("x = {x:?}");
         if let Ident(_) = x{
             if x.to_string() == "fn" {
                 break

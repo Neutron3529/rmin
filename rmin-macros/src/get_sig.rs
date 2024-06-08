@@ -10,7 +10,8 @@ pub fn get_sig(ret:&mut TokenStream, iter:&mut impl Iterator<Item=TokenTree>)->(
         if let [name,ty] = def[..] {
             Some([TokenStream::from_iter(name.iter().cloned()).to_string(), TokenStream::from_iter(ty.iter().cloned()).to_string()])
         } else {
-            println!("warning, {def:?} is omitted");
+            #[cfg(feature = "warning-on-empty-sig")]
+            println!("warning, {def:?} is omitted (maybe a function with empty signature)");
             None
         }
     }).collect::<Vec<[String;2]>>();

@@ -15,7 +15,7 @@ Please notice that, I am not familar with switching branches, the commit directl
 
 # Upcoming breaking changes in v0.4.0:
 
-[`character`] re-bind to [`Sexp<char>`], which has [`SEXPTYPE`] binds to [`STRSXP`](Rdef::STREXP)
+[`character`] re-bind to [`Sexp<char>`], which has [`SEXPTYPE`] binds to [`STRSXP`](Rdef::STRSXP)
 
 The v0.3.0 [`character`] binding moves to [`Rchar`], since R tells me the returned [`CHARSXP`](Rdef::CHARSXP) type has the name
 
@@ -42,13 +42,25 @@ A counter part for `std`, currently `std` is an indicator that just yields a war
 
 # `rmin-macros`
 
-Import proc-macros `#[export] fn func_name(...)...{...}` and `done!(crate_name)` into [`rmin::prelude`] and thus avaliable in [`rmin::*`] directly.
+Import proc-macros `#[export] fn func_name(...)...{...}` and `done!(crate_name)` into [`crate::prelude`] and thus avaliable in [`crate`]::* root directly.
 
 Notice that, macros require `rmin::reg` path to work (it is enabled automatically when choosing macros in `rmin` crate, if you enable rmin-macros as an independent dependency, you should enable `rmin::reg` manually.)
 
-## `camel-ass-wrapper`
+## `rmin-macros-camel-ass-wrapper`
 
-Internal use only, define the internal name with camel-ass name to avoid name collision.
+Internal use only, define the internal name with camel-ass naming method (aka iOS naming method) to avoid name collision.
+
+## `rmin-macros-warning`
+
+Raise a warning with function with error (or empty) signature, for example. fn()->Owned<character> will yield a `warning, [[]] is omitted` since the signature is empty.
+
+`fn(a:Sexp<f64>,)->Owned<f64>` also yields a same warning (due to the last comma)
+
+They might harm the macro, thus raise an warning (although the 2 examples above are harmless, writting things like `(a:Sexp<f64>,,b:Sexp<f64>)` will interrupt the compile procedure.)
+
+## `rmin-macros-verbose`
+
+Disable by default, contains some simple information such as the exported function name, and what the finalizer generates.
 
 # `public-all`
 
@@ -153,6 +165,10 @@ export LOAD="dyn.load('target/release/examples/libcompare_rmin.so');addnp=getNat
 
 #[cfg(not(have_std))]
 extern crate panic_unwind;
+
+#[cfg(doc)]
+use base::s::r_type::lib_r::SEXPTYPE;
+
 macro pm {
     ()=>{},
     ($(#[$meta:meta])* $pub:ident $mod:tt $item:tt ; $($tt:tt)*) => {
@@ -261,12 +277,15 @@ pub mod prelude {
     pub mod reg {
         pub use crate::base::s::r_type::lib_r::{R_CallMethodDef, R_registerRoutines, DllInfo, R_useDynamicSymbols, R_forceSymbols};
     }
+    /// re-exported macros: done
     #[doc(inline)]
     #[cfg_attr(doc,doc(cfg(feature = "rmin-macros")))]
     #[cfg(any(doc, feature = "rmin-macros"))]
-    pub use rmin_macros::{export, done};
+    pub use rmin_macros::done;
+    /// re-exported macros: export
+    #[doc(inline)]
+    #[cfg_attr(doc,doc(cfg(feature = "rmin-macros")))]
+    #[cfg(any(doc, feature = "rmin-macros"))]
+    pub use rmin_macros::r#export;
 }
 pub use prelude::*;
-
-#[doc(inline)]
-pub use prelude::{export, done};

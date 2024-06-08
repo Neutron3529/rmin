@@ -97,7 +97,7 @@ pub fn export(attr: TokenStream, item: TokenStream) -> TokenStream {
     // before:      ... name @ (params) -> out {...}
     let (sig,params) = get_sig(&mut ret, &mut iter);
     // after :      ... name (params) -> out @ {...} // finding the first {...}
-
+    #[cfg(feature = "verbose-output")]
     println!("got fn_name = {fname}, sig = `{sig}`, params = {params:?}");
 
     if let Some(wtf) = iter.next() {
@@ -141,10 +141,11 @@ pub fn export(attr: TokenStream, item: TokenStream) -> TokenStream {
         }}
         #[no_mangle]
         extern fn {usafe}_{n} {sig} {{
-            rmin::handle_panic(||fname({param}))
+            rmin::handle_panic(||{fname}({param}))
         }}
     }}"#);
-    // println!("expanded to {expanded}");
+    #[cfg(feature = "verbose-output")]
+    println!("#[export] writting additional mod: {expanded}");
     let res = TokenStream::from_str(&expanded).unwrap_or_else(|err|panic!("macro auto expand to {expanded}, there should be an unexpected error: {err:?}. File an issue please."));
     ret.extend(res);
     ret
@@ -165,9 +166,9 @@ pub fn done(input: TokenStream) -> TokenStream {
     // data.sort_unstable_by(|a,b|a.name.cmp(&b.name));
     let iter=data.iter().enumerate().map(|(n,x)|(n as isize,x.safe_name(),x.params.len())).chain(data.iter().enumerate().map(|(n,x)|(!(n as isize),x.unsafe_name(),x.params.len())));
     let dlls=iter.clone().map(|(n,name, cntr)|format!(r#"        R_CallMethodDef {{name:c".{prefix}{cname}".as_ptr(), fun:{name}_{n} as *const _, numArgs: {cntr}}},
-"#,cname = if n<0{!n} else {n}, prefix = if n <0 {"u"} else {"c"})).collect::<String>();
-    let fns=iter.clone().map(|(_,name, cntr)|format!(r#"        fn {name}({parameters})->Owned<()>;
-"#, parameters = (0..cntr).map(|x|format!("arg{x}: Sexp<()>")).collect::<Vec<_>>().as_slice().join(", "))).collect::<String>();
+"#,cname = if n<0{!n} else {n}, prefix = if n <0 {"u"} else {"c"}, n=if n<0 {!n} else {n})).collect::<String>();
+    let fns=iter.clone().map(|(n,name, cntr)|format!(r#"        fn {name}_{n}({parameters})->Owned<()>;
+"#, parameters = (0..cntr).map(|x|format!("arg{x}: Sexp<()>")).collect::<Vec<_>>().as_slice().join(", "), n=if n<0 {!n} else {n})).collect::<String>();
     let s=format!(r#"mod {mod_name} {{{camel}
     use ::rmin::{{Sexp, Owned, reg::*}};
     use ::core::ptr::null;
@@ -180,18 +181,19 @@ pub fn done(input: TokenStream) -> TokenStream {
     #[no_mangle]
     extern fn R_init_{name}(info:*mut DllInfo){{
         unsafe {{
-            let res=R_registerRoutines(
+            R_registerRoutines(
                 info,
                 null(),
                 R_CALL_METHOD.as_ptr(),
                 null(),
                 null()
             );
-            let dynres = R_useDynamicSymbols(info, 0);
-            let force = R_forceSymbols(info, 1);
+            R_useDynamicSymbols(info, 0);
+            R_forceSymbols(info, 1); // change this to 1 will make most of the functions unsearchable, which is sad for people who want to compile in Rust and load in R directly.
         }}
     }}
 }}"#,name=crate_name,saves=dlls, funcs=fns, mod_name="_please_do_not_use_rmin_export_interface_as_your_mod_name_", camel = if cfg!(feature = "camel-ass") {"\n"} else {""});
+    #[cfg(feature = "verbose-output")]
     println!("finalizer generates:\n{s}");
     TokenStream::from_str(&s).expect("fatal error: internal errors with macro `done`, please disable the `done` macro, and file an issue about that.")
 }

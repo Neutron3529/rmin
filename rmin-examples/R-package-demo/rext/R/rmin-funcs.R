@@ -2,11 +2,11 @@
 
 #' @docType package
 #' @usage NULL
-#' @useDynLib rex, .registration = TRUE
+#' @useDynLib librext, .registration = TRUE
 NULL
 
 #' Return string `"Hello world!"` to R.
 #' @export
-Rtest <- function() .Call(test)
+fine2 <- function() .Call(.u0)
 
 # nolint end
