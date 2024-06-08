@@ -1,6 +1,6 @@
 [package]
 name = "rmin"
-version = "0.4.0"
+version = "0.4.0-pre1"
 edition = "2021"
 description = "A minimal Rust lib for writting R extensions"
 authors = ["Neutron3529 <qweytr1@main.ustc.edu.cn>"]
@@ -24,5 +24,5 @@ rmin-macros-verbose = ["rmin-macros/verbose-output"]
 rmin-macros-camel-ass-wrapper = ["rmin-macros", "rmin-macros/camel-ass"]
 
 [dependencies]
-rmin-eh = { version = "0.1.0", path = "../rmin-eh", optional = true }
-rmin-macros = { version = "0.1.0", path = "../rmin-macros", optional = true }
+rmin-eh = { version = "0.0.1", path = "../rmin-eh", optional = true }
+rmin-macros = { version = "0.0.1", path = "../rmin-macros", optional = true }

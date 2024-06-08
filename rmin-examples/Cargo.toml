@@ -1,6 +1,6 @@
 [package]
 name = "rmin-examples"
-version = "0.4.0"
+version = "0.0.1"
 edition = "2021"
 description = "A minimal Rust lib for writting R extensions. Here are some useful examples."
 authors = ["Neutron3529 <qweytr1@main.ustc.edu.cn>"]
@@ -12,5 +12,5 @@ repository = "https://github.com/Neutron3529/rmin"
 std = ["rmin/std"]
 
 [dependencies]
-rmin = { version = "0.4.0", path = "../rmin" }
-rmin-macros = { version = "0.1.0", path = "../rmin-macros" }
+rmin = { version = "0.4.0-pre1", path = "../rmin" }
+rmin-macros = { version = "0.0.1", path = "../rmin-macros" }
