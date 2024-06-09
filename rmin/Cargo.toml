@@ -9,7 +9,7 @@ repository = "https://github.com/Neutron3529/rmin"
 
 
 [features]
-default = ["core", "panic-info-message", "rmin-macros", "public-by-default-even-public-all-is-not-set", "rmin-macros-warning"]
+default = ["core", "panic-info-message", "rmin-macros-warning", "rmin-macros-write-r-func-to-out-dir"]
 public-by-default-even-public-all-is-not-set = []
 std = []
 core = ["rmin-eh"]
