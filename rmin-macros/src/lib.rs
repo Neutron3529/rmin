@@ -2,6 +2,7 @@ use proc_macro::{*,TokenTree::{*}};
 use std::sync::Mutex;
 use core::{str::FromStr, ops::DerefMut};
 static FUNCS: Mutex<Vec<Meta>> = Mutex::new(Vec::new());
+const R_SCRIPT_NAME:&str = "aaa.rmin.Rust.Functions.R";
 
 #[derive(Default)]
 struct Flag(
@@ -9,12 +10,18 @@ struct Flag(
 );
 #[derive(Clone)]
 struct Meta {
-    fname:String,
     params:Vec<[String;2]>
 }
 impl Meta {
+    fn fname(&self)->&str {
+        &self.params[0][0]
+    }
+    #[cfg(feature = "write-r-func-to-out-dir")]
+    fn doc(&self)->&str {
+        &self.params[0][1]
+    }
     fn name(&self) -> &str {
-        self.fname.strip_prefix("r#").unwrap_or(&self.fname)
+        self.fname().strip_prefix("r#").unwrap_or(self.fname())
     }
     fn safe_name(&self) -> String {
         #[cfg(feature = "camel-ass")]
@@ -29,13 +36,16 @@ impl Meta {
         format!("_rust_{}_wrapper_unsafe_" , self.name())
     }
     fn param(&self) -> String {
-        self.params.iter().map(|x|x[0].clone()).collect::<Vec<_>>().join(", ")
+        self.params.iter().skip(1).map(|x|x[0].clone()).collect::<Vec<_>>().join(", ")
     }
     fn param_check(&self, delim:&str) -> String {
-        self.params.iter().map(|x|format!("{}.missing()",x[0])).collect::<Vec<_>>().join(delim)
+        self.params.iter().skip(1).map(|x|format!("{}.missing()",x[0])).collect::<Vec<_>>().join(delim)
     }
     fn param_check_report(&self) -> String {
-        self.params.iter().map(|x|format!("  missing {}: {{}}",x[0])).collect::<Vec<_>>().join("\n")
+        self.params.iter().skip(1).map(|x|format!("  missing {}: {{}}",x[0])).collect::<Vec<_>>().join("\n")
+    }
+    fn len(&self) -> usize {
+        self.params.len().wrapping_sub(1)
     }
 }
 
@@ -51,7 +61,7 @@ fn add<T:Into<TokenTree>+Clone>(a:&mut TokenStream, b:&T){
 
 
 mod get_name;
-use get_name::get_name;
+use get_name::get_meta;
 mod get_sig;
 use get_sig::get_sig;
 
@@ -87,24 +97,23 @@ pub fn export(attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut iter = item.into_iter();
 
     // before: @ ..... fn name (params) -> out {...}
-    let fname = get_name(&mut ret, &mut iter);
+    let mut meta = get_meta(&mut ret, &mut iter);
     // after : ..... fn name @ (params) -> out {...} // finding the first fn and read name
     // before:      ... name @ (params) -> out {...}
     let (sig,params) = get_sig(&mut ret, &mut iter);
     // after :      ... name (params) -> out @ {...} // finding the first {...}
+
+
     #[cfg(feature = "verbose-output")]
-    println!("got fn_name = {fname}, sig = `{sig}`, params = {params:?}");
+    println!("got fn_name = {fname}, sig = `{sig}`, params = {params:?}", fname = meta.fname());
+
+    meta.params.extend(params);
 
     if let Some(wtf) = iter.next() {
         add(&mut ret, &wtf);
         ret.extend(iter);
         println!("warning, function have the form `fn(..)... {{...}} (unexpected more things)`, keep {wtf:?} as-is.");
     }
-
-    let meta = Meta {
-        fname,
-        params
-    };
 
     let n = {
         let mut vec = FUNCS.lock()
@@ -114,16 +123,16 @@ pub fn export(attr: TokenStream, item: TokenStream) -> TokenStream {
         len
     };
 
-    let fname = &meta.fname;
+    let fname = meta.fname();
     let safe = meta.safe_name();
     let usafe = meta.unsafe_name();
     let param = meta.param();
     let check = meta.param_check(" || ");
-    let check_vals = meta.param_check(".missing(), ");
+    let check_vals = meta.param_check(", ");
     let report = meta.param_check_report();
     let safe_variant = if check.len()>0 {format!(r#"
             if {check} {{
-                rmin::handle_panic(||panic!("Parameter missing detected\n{report}", {check_vals}.missing()))
+                rmin::handle_panic(||panic!("Parameter missing detected\n{report}", {check_vals}))
             }} else {{
                 {usafe}_{n}({param})
             }}"#) } else {format!(r#"
@@ -160,7 +169,7 @@ pub fn done(input: TokenStream) -> TokenStream {
         return Default::default();
     }
     // data.sort_unstable_by(|a,b|a.name.cmp(&b.name));
-    let iter=data.iter().enumerate().map(|(n,x)|(n as isize,x.safe_name(),x.params.len())).chain(data.iter().enumerate().map(|(n,x)|(!(n as isize),x.unsafe_name(),x.params.len())));
+    let iter=data.iter().enumerate().map(|(n,x)|(n as isize,x.safe_name(),x.len())).chain(data.iter().enumerate().map(|(n,x)|(!(n as isize),x.unsafe_name(),x.len())));
     let dlls=iter.clone().map(|(n,name, cntr)|format!(r#"        R_CallMethodDef {{name:c".{prefix}{cname}".as_ptr(), fun:{name}_{n} as *const _, numArgs: {cntr}}},
 "#,cname = if n<0{!n} else {n}, prefix = if n <0 {"u"} else {"c"}, n=if n<0 {!n} else {n})).collect::<String>();
     let fns=iter.clone().map(|(n,name, cntr)|format!(r#"        fn {name}_{n}({parameters})->Owned<()>;
@@ -185,11 +194,44 @@ pub fn done(input: TokenStream) -> TokenStream {
                 null()
             );
             R_useDynamicSymbols(info, 0);
-            R_forceSymbols(info, 1); // change this to 1 will make most of the functions unsearchable, which is sad for people who want to compile in Rust and load in R directly.
+            R_forceSymbols(info, 0); // change this to 1 will make most of the functions unsearchable, which is sad for people who want to compile in Rust and load in R directly.
         }}
     }}
 }}"#,name=crate_name,saves=dlls, funcs=fns, mod_name="_please_do_not_use_rmin_export_interface_as_your_mod_name_", camel = if cfg!(feature = "camel-ass") {"\n"} else {""});
+
+
+
     #[cfg(feature = "verbose-output")]
     println!("finalizer generates:\n{s}");
+
+    #[cfg(feature = "write-r-func-to-out-dir")]
+    if let Ok(dir)=std::env::var("CARGO_MANIFEST_DIR"){
+        #[cfg(feature = "verbose-output")]
+        println!("Writting R wrappers to {dir}");
+        use std::path::Path;
+        use std::fs;
+        let path = Path::new(&dir);
+        if path.is_dir() {
+            fs::write(path.join(R_SCRIPT_NAME), format!(r#"# nolint start
+#' @name {crate_name}
+#' @docType package
+#' @usage NULL
+#' @useDynLib {crate_name}, .registration = TRUE
+"_PACKAGE"
+
+{all_fns}
+
+# nolint end
+"#, all_fns = data.iter().enumerate()
+    .map(|(n, meta)|format!(r#"{docs}
+#' @export
+{name} <- function({param}).Call(.c{n}{sep}{param})"#, docs = meta.doc(), name = meta.name(), param = meta.param(), sep = if meta.len()==0 {""} else {", "})).collect::<Vec<_>>().join("\n\n"))
+    ).unwrap_or_else(|_|println!("warning: failed to write R wrapper file `{R_SCRIPT_NAME}`"));
+        } else {
+            println!("Warning: environment variable $(R_SCRIPT_DIR) is set but the path `{dir}` is not a dir!")
+        }
+    } else {
+        println!("warning: $(CARGO_MANIFEST_DIR) does not have a value, thus abort writting R wrappers.")
+    }
     TokenStream::from_str(&s).expect("fatal error: internal errors with macro `done`, please disable the `done` macro, and file an issue about that.")
 }

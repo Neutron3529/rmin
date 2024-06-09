@@ -1,16 +1,13 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(feature = "no_std", no_std)]
+
 use rmin::prelude::*;
+use rmin::Vec;
+/// FIRST COMMENT
 #[export] // rmin::macros::export (or rmin::export with feature rmin-macros enabled)
+///SECOND COMMENT
 /// Return a+b to R.
-fn add_protect(a: Sexp<f64>, b: Sexp<f64>) -> Owned<f64> {
-    handle_panic(|| {
-        if a.missing() || b.missing() {
-            panic!("Parameter missing detected, a:{} b:{}",a.missing(), b.missing())
-        }
-        let mut c = Owned::raw(1);
-        c[0] = a[0] + b[0];
-        c
-    })
+fn add(a: Sexp<f64>, b: Sexp<f64>) -> Owned<f64> {
+    Owned::raw_from(&[a[0] + b[0]])
 }
 #[no_mangle]
 pub extern "C" fn add_noprotect(a: Sexp<f64>, b: Sexp<f64>) -> Owned<f64> {

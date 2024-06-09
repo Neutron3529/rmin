@@ -14,6 +14,7 @@ repository = "https://github.com/Neutron3529/rmin"
 camel-ass = []
 warning-on-empty-sig = []
 verbose-output = []
+write-r-func-to-out-dir = []
 
 [dependencies]
 

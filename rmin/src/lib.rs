@@ -52,7 +52,7 @@ Internal use only, define the internal name with camel-ass naming method (aka iO
 
 ## `rmin-macros-warning`
 
-Raise a warning with function with error (or empty) signature, for example. fn()->Owned<character> will yield a `warning, [[]] is omitted` since the signature is empty.
+Raise a warning with function with error (or empty) signature, for example. `fn()->Owned<character>` will yield a `warning, [[]] is omitted` since the signature is empty.
 
 `fn(a:Sexp<f64>,)->Owned<f64>` also yields a same warning (due to the last comma)
 
@@ -211,36 +211,36 @@ pm! {
     /// ```
     pub mod base;
 }
+/**
+Prelude, the only thing you could (and should) use.
 
-/// Prelude, the only thing you could (and should) use
-///
-/// Originally, to prevent the misuse of things like putting [`Protected<T>`](crate::base::s::Protected) into a FFI interface, most of the structs are private and hided. And the crate is designed to function just with the visible prelude module.
-///
-/// Currently, a feature gate `public-all` is added, and thus users could see all of the docs, which helps debugging with this crate.
-/// But, since the `public-all` feature gate is added to the base module, all the type are marked as **Available on crate feature `public-all` only**
-///
-/// To really checks what you could use directly, all the doc that prelude imports are inlined, and the prelude crate are marked as **Available on crate feature `always-avaliable-with-prelude-accesses` only.**
-///
-/// Here, `always-avaliable-with-prelude-accesses` is a dummy feature, it is enabled by default and does nothing (thus disable it makes nothing happens). The usage of that feature is that, when you see that feature,
-/// you could use it without enable `public-all`.
-///
-/// Sometimes, you may obtain *private* things such as [`Protected<T>`](crate::base::s::Protected) (from a [`SExt`]`::<_>::`[`new`](SExt::new)`(_)`), that's OK, since the R ffi does not accept a [`Protected<T>`](crate::base::s::Protected),
-/// and you cannot visit [`Protected<T>`](crate::base::s::Protected) directly without `public-all`, you could only keep that type until rust drop it automatically.
-///
-/// As for normal usage, it make no different to write `use rmin::*` or `use rmin::prelude::*`.
-///
-/// Choose your favorite one:)
-///
-/// # Example
-/// ## 1. use prelude
-/// ```
-/// use rmin::prelude::*;
-/// ```
-/// ## 2. use a shorter version
-/// ```
-/// use rmin::*;
-/// ```
+Originally, to prevent the misuse of things like putting [`Protected<T>`](crate::base::s::Protected) into a FFI interface, most of the structs are private and hided. And the crate is designed to function just with the visible prelude module.
 
+Currently, a feature gate `public-all` is added, and thus users could see all of the docs, which helps debugging with this crate.
+But, since the `public-all` feature gate is added to the base module, all the type are marked as **Available on crate feature `public-all` only**
+
+For those who have `public-all` feature, to really checks what you could use directly, all the doc that prelude imports are inlined, and the prelude crate are marked as **Available on crate feature `always-avaliable-with-prelude-accesses` only.**
+
+Here, `always-avaliable-with-prelude-accesses` is a dummy feature, it is enabled by default and does nothing (thus disable it makes nothing happens). The usage of that feature is that, when you see that feature,
+you could use it without enable `public-all`. **(But other feature are still affected (such as `have_std` and `rmin-macros` and `register-routines`))**
+
+Sometimes, you may obtain *private* things such as [`Protected<T>`](crate::base::s::Protected) (from a [`SExt`]`::<_>::`[`new`](SExt::new)`(_)`), that's OK, since the R ffi does not accept a [`Protected<T>`](crate::base::s::Protected),
+and you cannot visit [`Protected<T>`](crate::base::s::Protected) directly without `public-all`, you could only keep that type until rust drop it automatically.
+
+As for normal usage, it make no different to write `use rmin::*` or `use rmin::prelude::*`.
+
+Choose your favorite one:)
+
+# Example
+## 1. use prelude
+```
+use rmin::prelude::*;
+```
+## 2. use a shorter version
+```
+use rmin::*;
+```
+*/
 #[cfg_attr(
     doc,
     doc(cfg(all(
@@ -263,12 +263,12 @@ pub mod prelude {
 
     #[doc(inline)]
     #[cfg(not(feature = "min-import"))]
-    #[cfg_attr(doc, doc(cfg(not(any(doc, feature = "min-import")))))]
+    #[cfg_attr(doc, doc(cfg(not(feature = "min-import"))))]
     pub use crate::base::s::r_type::alias::*;
 
     #[doc(inline)]
     #[cfg(not(have_std))]
-    #[cfg_attr(doc, doc(cfg(not(any(doc, have_std)))))]
+    #[cfg_attr(doc, doc(cfg(not(have_std))))]
     pub use crate::base::no_std::{String, ToString, Vec, Box, macros::{format, println}};
 
     /// a simple (re-exported) module for R routines registration.
@@ -286,6 +286,6 @@ pub mod prelude {
     #[doc(inline)]
     #[cfg_attr(doc,doc(cfg(feature = "rmin-macros")))]
     #[cfg(any(doc, feature = "rmin-macros"))]
-    pub use rmin_macros::r#export;
+    pub use rmin_macros::export;
 }
 pub use prelude::*;

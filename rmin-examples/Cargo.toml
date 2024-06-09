@@ -12,7 +12,8 @@ repository = "https://github.com/Neutron3529/rmin"
 
 
 [features]
-std = ["rmin/std"]
+default = ["no_std", "rmin/rmin-macros-write-r-func-to-out-dir"]
+no_std = ["rmin/core"]
 
 [dependencies]
-rmin = { version = "0.4.0-pre1", path = "../rmin", features = ["rmin-macros-verbose", "std"], default-features = false }
+rmin = { version = "0.4.0-pre1", path = "../rmin", features = ["rmin-macros-verbose"], default-features = false }

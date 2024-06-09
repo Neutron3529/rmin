@@ -1,0 +1,7 @@
+rext/R/aaa.rmin.Rust.Functions.R
+rext/src/rext.so
+rext/src/rust/aaa.rmin.Rust.Functions.R
+rext/src/rust/target
+rext/src/.cargo
+rext/man
+rext.Rcheck

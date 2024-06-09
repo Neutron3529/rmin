@@ -1,3 +1,2 @@
-^src/\.cargo$
-\.cargo$
+src/.cargo$
 src/rust/target$
