@@ -50,7 +50,7 @@ fn parse_doc(meta:&mut String, prev_is_sharp: &mut bool, x:TokenTree){
         if ch.as_char() != '=' { return }
         // status: # @[doc = stream[2..]]
         let Literal(ref lit) = stream[2] else { return };
-        meta.push_str(&format!("\n#' {lit}"));
+        meta.push_str(&format!("\n#' {}", lit.to_string().trim_matches(|c| c == '\"' || c == '\'').replace(r#"\'"#,r#"'"#).replace(r#"\""#,r#"""#).replace(r#"\n"#,"\n#' ").replace(r#"\t"#,"\t").replace(r#"\r"#,"\r") ));
     } else if let Punct(x) = x {
         if x.as_char()=='#' {
             *prev_is_sharp = true;

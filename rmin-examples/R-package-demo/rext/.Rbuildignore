@@ -1,2 +1,4 @@
-src/.cargo$
-src/rust/target$
+^LICENSE\.md$
+^src/rust/target$
+^src/.*\.so$
+^src/\.cargo$

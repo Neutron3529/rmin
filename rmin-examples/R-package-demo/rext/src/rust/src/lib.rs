@@ -6,34 +6,54 @@ use rmin::*;
 //     Owned::raw_from_str("im .1u test")
 // }
 
-/// fine
-///
-/// a simple function tell I'm fine2
+/**fine
+
+@description
+a simple function tell I'm fine
+
+@details
+blah blah
+
+@param id integer.
+*/
 #[export]
-pub fn fine(a: Sexp<i32>)->Owned<character> {
-    Owned::raw_from_str(format!("I'm fine{}",a[0]))
+pub fn fine(id: Sexp<i32>)->Owned<character> {
+    Owned::raw_from_str(format!("I'm fine{}",id[0]))
 }
 
 /// fine2
 ///
+/// @description
 /// a simple function tell I'm fine2
+///
 #[export]
 pub fn fine2()->Owned<character> {
     Owned::raw_from_str("I'm fine2")
 }
 
-/// add
-///
-/// add a and b then return the result.
+/**add
+
+@description
+add a and b then return the result.
+
+@details
+blah blah
+
+@param a,b double.*/
 #[export]
 pub fn add(a: Sexp<f64>, b: Sexp<f64>)->Owned<f64> {
     Owned::raw_from(&[a[0]+b[0]])
 }
 
+/**add
 
-/// add4
-///
-/// add 4 numbers together
+@description
+add 4 numbers together.
+
+@details
+blah blah
+
+@param a,b,c,d double.*/
 #[export]
 pub fn add4(a: Sexp<f64>, b: Sexp<f64>, c: Sexp<f64>, d:Sexp<f64>)->Owned<f64> {
     Owned::raw_from(&[a[0]+b[0]+c[0]+d[0]])
@@ -42,6 +62,15 @@ pub fn add4(a: Sexp<f64>, b: Sexp<f64>, c: Sexp<f64>, d:Sexp<f64>)->Owned<f64> {
 /// another_sum
 ///
 /// a function that compare the sum speed between Rust and R. R should be faster.
+/**another_sum
+
+@description
+a function that compare the sum speed between Rust and R. R should be faster..
+
+@details
+blah blah
+
+@param a double vector.*/
 #[export]
 pub fn another_sum(a: Sexp<f64>)->Owned<f64> {
     Owned::raw_from(&[a.data().into_iter().copied().sum::<f64>()])
