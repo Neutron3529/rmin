@@ -2,6 +2,7 @@ use proc_macro::{*,TokenTree::{*}};
 use std::sync::Mutex;
 use core::{str::FromStr, ops::DerefMut};
 static FUNCS: Mutex<Vec<Meta>> = Mutex::new(Vec::new());
+#[cfg(feature = "write-r-func-to-out-dir")]
 const R_SCRIPT_NAME:&str = "aaa.rmin.Rust.Functions.R";
 
 #[derive(Default)]
@@ -159,10 +160,16 @@ pub fn export(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn done(input: TokenStream) -> TokenStream {
     let crate_name = if let Some(Ident(x)) = input.into_iter().next() {
         x.to_string()
+    } else if let Ok(s) = std::env::var("CARGO_PKG_NAME") {
+        s.to_string()
     } else {
-        println!("should provide a crate name.");
+        println!("Warning: CARGO_PKG_NAME is not set. should provide a crate name.");
         return Default::default()
     };
+
+    finalize(crate_name)
+}
+fn finalize(crate_name:String) -> TokenStream {
     let data = core::mem::take(FUNCS.lock().expect("fatal error: internal errors while reading static variable FUNCS, compile again might help, file an issue might also help.").deref_mut());
     if data.len()==0 {
         println!("warning: no fn could be done, abort processing.");
@@ -234,4 +241,34 @@ pub fn done(input: TokenStream) -> TokenStream {
         println!("warning: $(CARGO_MANIFEST_DIR) does not have a value, thus abort writting R wrappers.")
     }
     TokenStream::from_str(&s).expect("fatal error: internal errors with macro `done`, please disable the `done` macro, and file an issue about that.")
+}
+#[cfg(feature = "write-r-func-to-out-dir")]
+#[allow(non_snake_case)]
+fn print_env(){
+    let CARGO_MANIFEST_DIR = std::env::var("CARGO_MANIFEST_DIR");
+    let CARGO_PKG_VERSION = std::env::var("CARGO_PKG_VERSION");
+    let CARGO_PKG_VERSION_MAJOR = std::env::var("CARGO_PKG_VERSION_MAJOR");
+    let CARGO_PKG_VERSION_MINOR = std::env::var("CARGO_PKG_VERSION_MINOR");
+    let CARGO_PKG_VERSION_PATCH = std::env::var("CARGO_PKG_VERSION_PATCH");
+    let CARGO_PKG_VERSION_PRE = std::env::var("CARGO_PKG_VERSION_PRE");
+    let CARGO_PKG_AUTHORS = std::env::var("CARGO_PKG_AUTHORS");
+    let CARGO_PKG_NAME = std::env::var("CARGO_PKG_NAME");
+    let CARGO_PKG_DESCRIPTION = std::env::var("CARGO_PKG_DESCRIPTION");
+    let CARGO_PKG_HOMEPAGE = std::env::var("CARGO_PKG_HOMEPAGE");
+    let CARGO_PKG_REPOSITORY = std::env::var("CARGO_PKG_REPOSITORY");
+    let OUT_DIR = std::env::var("OUT_DIR");
+
+    println!(r#"vars:
+    CARGO_MANIFEST_DIR = {CARGO_MANIFEST_DIR:?}
+    CARGO_PKG_VERSION = {CARGO_PKG_VERSION:?}
+    CARGO_PKG_VERSION_MAJOR = {CARGO_PKG_VERSION_MAJOR:?}
+    CARGO_PKG_VERSION_MINOR = {CARGO_PKG_VERSION_MINOR:?}
+    CARGO_PKG_VERSION_PATCH = {CARGO_PKG_VERSION_PATCH:?}
+    CARGO_PKG_VERSION_PRE = {CARGO_PKG_VERSION_PRE:?}
+    CARGO_PKG_AUTHORS = {CARGO_PKG_AUTHORS:?}
+    CARGO_PKG_NAME = {CARGO_PKG_NAME:?}
+    CARGO_PKG_DESCRIPTION = {CARGO_PKG_DESCRIPTION:?}
+    CARGO_PKG_HOMEPAGE = {CARGO_PKG_HOMEPAGE:?}
+    CARGO_PKG_REPOSITORY = {CARGO_PKG_REPOSITORY:?}
+    OUT_DIR = {OUT_DIR:?}"#)
 }

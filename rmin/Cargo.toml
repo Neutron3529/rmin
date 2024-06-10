@@ -11,8 +11,8 @@ repository = "https://github.com/Neutron3529/rmin"
 [features]
 default = ["core", "panic-info-message", "rmin-macros-warning", "rmin-macros-write-r-func-to-out-dir"]
 public-by-default-even-public-all-is-not-set = []
-std = []
-core = ["rmin-eh"]
+std = ["rmin-macros?/std"]
+core = ["rmin-eh", "rmin-macros?/no-std"]
 public-all = []
 min-import = []
 panic-info-message = []
@@ -26,4 +26,4 @@ rmin-macros-write-r-func-to-out-dir = ["rmin-macros", "rmin-macros/write-r-func-
 
 [dependencies]
 rmin-eh = { version = "0.0.1", path = "../rmin-eh", optional = true }
-rmin-macros = { version = "0.0.3", path = "../rmin-macros", optional = true }
+rmin-macros = { version = "0.0.4", path = "../rmin-macros", optional = true }

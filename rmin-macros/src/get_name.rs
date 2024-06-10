@@ -40,17 +40,24 @@ fn parse_doc(meta:&mut String, prev_is_sharp: &mut bool, x:TokenTree){
         let Group (x) = x else { return };
         if x.delimiter() != Delimiter::Bracket { return }
         // status: # @[...]
-        let stream = x.stream().into_iter().collect::<Vec<_>>();
-        // status: # @[stream]
-        if stream.len()<3 { return } // cannot satisfy doc = literal
-        let Ident(ref ident) = stream[0] else { return };
-        if ident.to_string() != "doc" { return }
-        // status: # @[doc stream[1..]]
-        let Punct(ref ch) = stream[1] else { return };
-        if ch.as_char() != '=' { return }
-        // status: # @[doc = stream[2..]]
-        let Literal(ref lit) = stream[2] else { return };
-        meta.push_str(&format!("\n#' {}", lit.to_string().trim_matches(|c| c == '\"' || c == '\'').replace(r#"\'"#,r#"'"#).replace(r#"\""#,r#"""#).replace(r#"\n"#,"\n#' ").replace(r#"\t"#,"\t").replace(r#"\r"#,"\r") ));
+
+        if let [Ident(ref ident), Punct(ref eq), Literal(ref lit)] = x.stream().into_iter().collect::<Vec<_>>()[..] {
+            if ident.to_string() == "doc" && eq.as_char() == '=' {
+                meta.push_str(&format!("\n#' {}", lit.to_string().trim_matches(|c| c == '\"' || c == '\'').replace(r#"\'"#,r#"'"#).replace(r#"\""#,r#"""#).replace(r#"\n"#,"\n#' ").replace(r#"\t"#,"\t").replace(r#"\r"#,"\r") ));
+            }
+        }
+
+        // let stream = x.stream().into_iter().collect::<Vec<_>>();
+        // // status: # @[stream]
+        // if stream.len()<3 { return } // cannot satisfy doc = literal
+        // let Ident(ref ident) = stream[0] else { return };
+        // if ident.to_string() != "doc" { return }
+        // // status: # @[doc stream[1..]]
+        // let Punct(ref ch) = stream[1] else { return };
+        // if ch.as_char() != '=' { return }
+        // // status: # @[doc = stream[2..]]
+        // let Literal(ref lit) = stream[2] else { return };
+        // meta.push_str(&format!("\n#' {}", lit.to_string().trim_matches(|c| c == '\"' || c == '\'').replace(r#"\'"#,r#"'"#).replace(r#"\""#,r#"""#).replace(r#"\n"#,"\n#' ").replace(r#"\t"#,"\t").replace(r#"\r"#,"\r") ));
     } else if let Punct(x) = x {
         if x.as_char()=='#' {
             *prev_is_sharp = true;

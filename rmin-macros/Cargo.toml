@@ -11,6 +11,8 @@ license = "AGPL-3.0"
 repository = "https://github.com/Neutron3529/rmin"
 
 [features]
+std = []
+no-std = []
 camel-ass = []
 warning-on-empty-sig = []
 verbose-output = []

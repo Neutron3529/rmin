@@ -1,7 +1,5 @@
 #![cfg_attr(feature = "no_std", no_std)]
-
 use rmin::prelude::*;
-use rmin::Vec;
 /// FIRST COMMENT
 #[export] // rmin::macros::export (or rmin::export with feature rmin-macros enabled)
 ///SECOND COMMENT
