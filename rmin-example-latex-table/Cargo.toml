@@ -1,0 +1,10 @@
+[lib]
+crate-type = ["cdylib"]
+
+[package]
+name = "rmin-example-latex-table"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rmin = { version = "0.4.0-pre2", path = "../rmin", default-features = false, features = ["panic-info-message", "rmin-macros-verbose", "rmin-macros-write-r-func-to-out-dir", "std"] }
