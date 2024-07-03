@@ -8,7 +8,7 @@ mod caption;
 pub use caption::Caption;
 
 mod row;
-pub use row::{Row, Rows, RowAlign, ItemFn};
+pub use row::{ItemFn, Row, RowAlign, Rows};
 
 mod data;
 pub use data::Data;
@@ -19,13 +19,18 @@ pub struct TableContent {
     pub col_name: Rows,
 }
 impl TableContent {
-    fn new()->Self{Default::default()}
-    fn format<'a>(&'a self)->fmt::Arguments<'a> {
-        format_args!("{}{}",self.template_rows, self.col_name)
+    fn new() -> Self {
+        Default::default()
+    }
+    fn format(&self) -> String {
+        format!("{}{}", self.template_rows, self.col_name)
     }
 }
 impl Display for TableContent {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {Ok(())}
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        drop(f);
+        Ok(())
+    }
 }
 // pub struct TableContent{
 //     pub format: Format,
@@ -77,9 +82,14 @@ impl Display for TableContent {
 //     }
 // }
 
-
-
-fn main(){
-    let a = Table {caption:Caption{cap:Some("fine".to_string()), label:Some("t1".to_string())}, content:TableContent::new()};
+fn main() {
+    let mut a = Table::default();
+    a.caption = Caption {
+        cap: Some("fine".to_string()),
+        label: Some("t1".to_string()),
+    };
+    a.content = TableContent::new();
+    a.content.template_rows = Rows::header("ll|");
+    a.content.col_name = Rows::header("ccc|ccc|ccc");
     println!("{a}")
 }

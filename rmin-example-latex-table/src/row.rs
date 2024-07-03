@@ -1,11 +1,11 @@
-use crate::{fmt, Display, Data};
+use crate::{fmt, Data, Display};
 #[derive(Default)]
 pub struct Rows {
-    pub rows:Vec<Row>,
-    pub verts:Vec<usize>
+    pub rows: Vec<Row>,
+    pub verts: Vec<usize>,
 }
 impl Rows {
-    pub fn header(s:&str)->Rows{
+    pub fn header(s: &str) -> Rows {
         let mut rows = Vec::new();
         let mut verts = Vec::new();
         for item in s.chars() {
@@ -13,18 +13,17 @@ impl Rows {
                 '|' => verts.push(rows.len()),
                 'l' => rows.push(Row::new_align(RowAlign::Left)),
                 'r' => rows.push(Row::new_align(RowAlign::Right)),
-                _ => rows.push(Row::new_align(RowAlign::Center)) /*any other characters regarded as 'c'*/
+                _ => rows.push(Row::new_align(RowAlign::Center)), /*any other characters regarded as 'c'*/
             }
         }
-        Self{rows, verts}
+        Self { rows, verts }
     }
 }
 
-
 impl Display for Rows {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut verts=0;
-        for (n,i) in self.rows.iter().enumerate() {
+        let mut verts = 0;
+        for (n, i) in self.rows.iter().enumerate() {
             while let Some(t) = self.verts.get(verts).copied() {
                 if t <= n {
                     verts += 1;
@@ -34,6 +33,9 @@ impl Display for Rows {
                 }
             }
             i.fmt(f)?
+        }
+        for _ in verts..self.verts.len() {
+            write!(f, "|")?
         }
         Ok(())
     }
@@ -49,23 +51,27 @@ pub struct Row {
 }
 
 impl Row {
-    pub fn new()->Self {
+    pub fn new() -> Self {
         Default::default()
     }
-    pub fn new_align(align:RowAlign)->Self{
+    pub fn new_align(align: RowAlign) -> Self {
         Self {
-            align:align,
+            align: align,
             ..Default::default()
         }
     }
 }
 impl Display for Row {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f,"{}", match self.align {
-            RowAlign::Left=>"l",
-            RowAlign::Center=>"c",
-            RowAlign::Right=>"r",
-        })
+        write!(
+            f,
+            "{}",
+            match self.align {
+                RowAlign::Left => "l",
+                RowAlign::Center => "c",
+                RowAlign::Right => "r",
+            }
+        )
     }
 }
 #[derive(Default)]
@@ -73,17 +79,17 @@ pub enum RowAlign {
     Left,
     #[default]
     Center,
-    Right
+    Right,
 }
 #[derive(Default)]
 pub struct ItemFn {
-    rounding: usize,
-    as_percentage: bool,
+    pub rounding: u32,
+    pub as_percentage: bool,
 }
 impl ItemFn {
-    pub fn fmt(&self, mut item:Data<f64>, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    pub fn fmt(&self, mut item: Data<f64>, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.as_percentage {
-            item.rounding = (self.rounding as isize-2).max(0) as usize;
+            item.rounding = (self.rounding as i32 - 2).max(0) as u32;
             item.as_percentage = true
         } else {
             item.rounding = self.rounding;
@@ -92,4 +98,4 @@ impl ItemFn {
         write!(f, "{item}")
     }
 }
-fn main(){}
+fn main() {}
