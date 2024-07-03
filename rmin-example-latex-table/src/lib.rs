@@ -1,104 +1,85 @@
 //use rmin::*;
 use core::fmt::{self, Display};
-use std::collections::HashMap;
-/// Latex table, contains the following parts:
-/// 
-///	\begin{{table}}
-///		\caption{{{caption}\label{{{label}}}}}		
-///		\begin{{tabular}}{{{format}}}
-///                 \toprule
-///                 {content}
-///                 \bottomrule
-///     	\end{{tabular}}
-///	\end{{table}}
 
-pub struct Table {
-    pub caption: Caption,
-    pub format: Format,
-    pub content: TableContent,
-}
-impl Display for Table {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, r#"\begin{{table}}
-    {caption}
-    \begin{{tabular}}{{{format}}}
-        \toprule
-        {content}
-        \buttomrule
-    \end{{tabular}}
-\end{{table}}"#, caption = self.caption, format = self.format, content = self.content)
-    }
-}
-pub struct Caption {
-    pub cap: Option<String>,
-    pub label: Option<String>
-}
-impl Display for Caption {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match (self.cap.as_ref(), self.label.as_ref()) {
-            (Some(c), Some(l)) => write!(f,r#"\caption{{{c}\label{{{l}}}}}"#),
-            (Some(c), None)    => write!(f,r#"\caption{{{c}}}"#),
-            (None, Some(l))    => write!(f,r#"\label{{{l}}}"#),
-            (None, None)       => Ok(())
-        }
-    }
-}
-pub struct Format {
-    pub data:Vec<Row>,
-    pub row:Vec<Row>,
-}
-impl Display for Format {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for r in self.data.iter().chain(self.row.iter()) {
-            write!(f, "{r}")?
-        }
-        Ok(())
-    }
-}
-pub enum Row {
-    Left(ExtraFormat),
-    Center(ExtraFormat),
-    Right(ExtraFormat),
-    LeftV(ExtraFormat),
-    CenterV(ExtraFormat),
-    RightV(ExtraFormat),
-    VLeftV(ExtraFormat),
-    VCenterV(ExtraFormat),
-    VRightV(ExtraFormat),
-}
-impl Row {
-    fn l()->Self{Row::Left(Default::default())}
-    fn c()->Self{Row::Center(Default::default())}
-    fn r()->Self{Row::Right(Default::default())}
-    fn lv()->Self{Row::LeftV(Default::default())}
-    fn cv()->Self{Row::CenterV(Default::default())}
-    fn rv()->Self{Row::RightV(Default::default())}
-}
+mod table;
+pub use table::Table;
+
+mod caption;
+pub use caption::Caption;
+
+mod row;
+pub use row::{Row, Rows, RowAlign, ItemFn};
+
+mod data;
+pub use data::Data;
+
 #[derive(Default)]
-pub struct ExtraFormat;
-
-impl Display for Row {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f,"{}", match self {
-            Row::Left(_)=>"l",
-            Row::Center(_)=>"c",
-            Row::Right(_)=>"r",
-            Row::LeftV(_)=>"l|",
-            Row::CenterV(_)=>"c|",
-            Row::RightV(_)=>"r|",
-            Row::VLeftV(_)=>"|l|",
-            Row::VCenterV(_)=>"|c|",
-            Row::VRightV(_)=>"|r|",
-        })
+pub struct TableContent {
+    pub template_rows: Rows,
+    pub col_name: Rows,
+}
+impl TableContent {
+    fn new()->Self{Default::default()}
+    fn format<'a>(&'a self)->fmt::Arguments<'a> {
+        format_args!("{}{}",self.template_rows, self.col_name)
     }
 }
-pub struct TableContent{}
 impl Display for TableContent {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        Ok(())
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {Ok(())}
 }
+// pub struct TableContent{
+//     pub format: Format,
+//     pub data:Vec<f64>,
+//     pub data_cols:usize,
+//     pub col_name:Vec<String>,
+//     pub header:Vec<String>,
+//     pub hline:Vec<usize>,
+//     pub cline:Vec<(usize,usize,usize)>,
+// }
+// impl Display for TableContent {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         for i in self.header {
+//             write!(f,"{i}")?
+//         }
+//         let data_rows = self.data.len()/self.data_cols;
+//         if data_rows != self.format.row.len() {
+//             write!(f,"<Error: data row count does not matches the template row count.>")?;
+//         } else if self.col_name.len() != self.data_cols {
+//             write!(f,"<Error: data column count does not matches the template column count.>")?;
+//         } else {
+//             for i in 0..self.data_cols {
+//                 write!(f, "        {} & ",col_name[i])?;
+//                 for j in 0..data_rows {
+//                     let data = self.data[i+j*self.data_cols];
+//                     self.format.row[j].format
+//                     if j != data_rows - 1 {
+//                         write!(f, " & ")?
+//                     } else {
+//                         write!(f, "\\\\\n")?
+//                     }
+//                 }
+//             }
+//         }
+//         Ok(())
+//     }
+// }
+//
+// pub struct Format {
+//     pub data:Vec<Row>,
+//     pub row:Vec<Row>,
+// }
+// impl Display for Format {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         for r in self.data.iter().chain(self.row.iter()) {
+//             write!(f, "{r}")?
+//         }
+//         Ok(())
+//     }
+// }
+
+
+
 fn main(){
-    let a = Table {caption:Caption{cap:Some("fine".to_string()), label:Some("t1".to_string())}, format:Format{data:vec![Row::l(),Row::lv()], row:vec![Row::c(), Row::c(),Row::cv(),Row::c(), Row::c(), Row::c()]}, content:TableContent{}};
+    let a = Table {caption:Caption{cap:Some("fine".to_string()), label:Some("t1".to_string())}, content:TableContent::new()};
     println!("{a}")
 }
