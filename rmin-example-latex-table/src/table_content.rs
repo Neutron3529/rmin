@@ -1,4 +1,11 @@
 use crate::{fmt, Display, Rows};
+/// Table content
+///     \begin{tabular} % defined in Table
+///         \toprules % defined in Table
+///             % col_name[0] .. col_name[last]    template_rows[0] .. template_rows[last]
+///             meta                            &
+///         \bottomrules % defined in Table
+///     \end{tabular} % defined in Table
 #[derive(Default)]
 pub struct TableContent {
     /// real data
@@ -9,7 +16,8 @@ pub struct TableContent {
     pub name_rows: Rows,
     /// col names, `self.cols()` equals to `self.col_name.len()`.
     pub col_name:Vec<String>,
-    pub meta : Option<Vec<String>>,
+    /// store meta informations by row-first storage.
+    pub meta : Option<String>,
     /// row names
     pub template_rows: Rows,
     /// extra hline
