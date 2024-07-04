@@ -14,6 +14,7 @@ use crate::{fmt, Caption, Display, TableContent};
 ///         {$$(content)$$}
 ///         {$$(bottom_rules)$$}
 ///     \end{tabular}
+///     {$$(footnotes)$$}
 ///	\end{table}
 /// ```
 
@@ -23,6 +24,7 @@ pub struct Table {
     pub top_rules: Rules<2, Vec<String>, String>,
     pub content: TableContent,
     pub bottom_rules: Rules<2, Vec<String>, String>,
+    pub footnotes: Rules<1, Vec<String>, String>
 }
 impl Default for Table {
     fn default() -> Self {
@@ -32,18 +34,68 @@ impl Default for Table {
             caption: Default::default(),
             table_rules: Rules(Default::default(), PhantomData),
             content: Default::default(),
+            footnotes: Rules(Default::default(), PhantomData),
         }
     }
 }
 impl Table {
-    fn new(table_rules: Vec<String>) -> Self {
+    pub fn new(table_rules: Vec<String>) -> Self {
         Self {
             table_rules: Rules::new(table_rules),
             top_rules: Rules::new(vec![r#"\toprules"#.to_string()]),
             bottom_rules: Rules::new(vec![r#"\bottomrules"#.to_string()]),
             caption: Default::default(),
             content: Default::default(),
+            footnotes: Rules(Default::default(), PhantomData),
         }
+    }
+    /// Add functions
+    pub fn add_table_rule(&mut self, rule:impl Into<String>){
+        self.table_rules.0.push(rule.into())
+    }
+    /// Add functions
+    pub fn add_top_rule(&mut self, rule:impl Into<String>){
+        self.top_rules.0.push(rule.into())
+    }
+    /// Add functions
+    pub fn add_bottom_rule(&mut self, rule:impl Into<String>){
+        self.bottom_rules.0.push(rule.into())
+    }
+    /// Add functions
+    pub fn add_footnote(&mut self, rule:impl Into<String>){
+        self.footnotes.0.push(rule.into())
+    }
+    /// Set functions
+    pub fn set_caption(&mut self, caption:impl Into<String>){
+        self.caption.cap = Some(caption.into())
+    }
+    /// Set functions
+    pub fn set_label(&mut self, label:impl Into<String>){
+        self.caption.label = Some(label.into())
+    }
+    /// Set functions
+    pub fn set_table_rules(&mut self, rules:impl Into<Vec<String>>){
+        self.table_rules.0 = rules.into()
+    }
+    /// Set functions
+    pub fn set_top_rules(&mut self, rules:impl Into<Vec<String>>){
+        self.top_rules.0 = rules.into()
+    }
+    /// Set functions
+    pub fn set_bottom_rules(&mut self, rules:impl Into<Vec<String>>){
+        self.bottom_rules.0 = rules.into()
+    }
+    /// Set functions
+    pub fn set_footnotes(&mut self, rules:impl Into<Vec<String>>){
+        self.footnotes.0 = rules.into()
+    }
+    /// delete functions
+    pub fn remove_caption(&mut self){
+        self.caption.cap = None
+    }
+    /// delete functions
+    pub fn remove_label(&mut self){
+        self.caption.label = None
     }
 }
 impl Display for Table {

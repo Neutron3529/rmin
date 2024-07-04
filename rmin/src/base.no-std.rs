@@ -1,6 +1,6 @@
 use crate::{R::Rchar, base::s::{Sexp, SExt, r_type::lib_r::{R_chk_calloc, R_chk_free, R_chk_realloc}}};
 use macros::*;
-use core::{ffi::c_void, any::Any, panic::PanicPayload};
+use core::{any::Any, ffi::c_void, fmt::{Debug, Display}, panic::PanicPayload};
 #[cfg(not(test))]
 use core::fmt::Write; // for panic panic_handler
 
@@ -82,19 +82,10 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     let charsxp : Sexp<_> = {
         const REASON:&str="Fatal: cannot write to string during panic handling.";
         let mut message = String::new();
-        if let Some(s) = info.payload().downcast_ref::<&str>() {
-            write!(&mut message, "panic occurred: {s:?}").expect(REASON)
-        } else {
-            write!(&mut message, "panic occurred:").expect(REASON)
-        }
         #[cfg(feature="panic-info-message")]
-        if let Some(i) = info.message() {
-            if let Some(s) = info.payload().downcast_ref::<&str>() {
-                write!(&mut message," {i} ({s})").expect(REASON)
-            } else {
-                write!(&mut message," {i}").expect(REASON)
-            }
-        }
+        write!(&mut message,"Panic occured: {}", info.message()).expect(REASON);
+        #[cfg(not(feature="panic-info-message"))]
+        write!(&mut message,"Panic occured: (message ignored)").expect(REASON);
         if let Some(i) = info.location() {
             write!(
                 &mut message,
@@ -115,7 +106,13 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     }
 }
 /// std struct for unwinding.
+#[derive(Debug)]
 pub struct RewrapBox(Box<dyn Any + Send>);
+impl Display for RewrapBox {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        <Self as Debug>::fmt(self, f)
+    }
+}
 unsafe impl PanicPayload for RewrapBox {
     fn take_box(&mut self) -> *mut (dyn Any + Send) {
         Box::into_raw(core::mem::replace(&mut self.0, Box::new(())))

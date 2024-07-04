@@ -98,4 +98,3 @@ impl ItemFn {
         write!(f, "{item}")
     }
 }
-fn main() {}
