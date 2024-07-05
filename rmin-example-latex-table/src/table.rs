@@ -103,8 +103,7 @@ impl Display for Table {
         write!(
             f,
             r#"\begin{{table}}{caption}{table_rules}
-    \begin{{tabular}}{{{format}}}{top_rules}
-{content}{bottom_rules}
+    \begin{{tabular}}{{{format}}}{top_rules}{content}{bottom_rules}
     \end{{tabular}}
 \end{{table}}"#,
             caption = Rules::<1, [&Caption; 1], &Caption>::new([&self.caption]),

@@ -2,6 +2,7 @@ use crate::{fmt, Data, Display};
 #[derive(Default)]
 pub struct Rows {
     pub rows: Vec<Row>,
+    pub names: Vec<String>,
     pub verts: Vec<usize>,
 }
 impl Rows {
@@ -13,10 +14,34 @@ impl Rows {
                 '|' => verts.push(rows.len()),
                 'l' => rows.push(Row::new_align(RowAlign::Left)),
                 'r' => rows.push(Row::new_align(RowAlign::Right)),
+                '%' => {rows.last_mut().map(|x|x.ifn.as_percentage = true);}
+                ch @ '0'..='9' => {rows.last_mut().map(|x|x.ifn.rounding = x.ifn.rounding*10 + (ch as u8 - b'0') as u32);}
                 _ => rows.push(Row::new_align(RowAlign::Center)), /*any other characters regarded as 'c'*/
             }
         }
-        Self { rows, verts }
+        let names = vec![String::new();rows.len()];
+        Self { rows, names, verts }
+    }
+    pub fn set_names(&mut self, names:impl Into<Vec<String>>) {
+        self.names = names.into()
+    }
+    pub fn set_roundings(&mut self, rounding:impl Into<u32>) {
+        let rounding = rounding.into();
+        for i in &mut self.rows {
+            i.ifn.rounding = rounding;
+        }
+    }
+    pub fn set_align(&mut self, index:impl Into<usize>, align:impl Into<RowAlign>) {
+        self.rows[index.into()].align = align.into()
+    }
+    pub fn set_rounding(&mut self, index:impl Into<usize>, rounding:impl Into<u32>) {
+        self.rows[index.into()].ifn.rounding = rounding.into()
+    }
+    pub fn set_as_percentage(&mut self, index:impl Into<usize>, as_percentage:impl Into<bool>) {
+        self.rows[index.into()].ifn.as_percentage = as_percentage.into()
+    }
+    pub fn set_name(&mut self, index:impl Into<usize>, name:impl Into<String>) {
+        self.names[index.into()] = name.into()
     }
 }
 
