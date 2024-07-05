@@ -1,4 +1,4 @@
-use crate::{fmt, Data, Display, Row, Rows};
+use crate::{fmt, Data, Display, Rows};
 /// Table content
 ///     \begin{tabular} % defined in Table
 ///         \toprules % defined in Table
