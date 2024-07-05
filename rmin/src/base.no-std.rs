@@ -1,4 +1,4 @@
-use crate::{R::Rchar, base::s::{Sexp, SExt, r_type::lib_r::{R_chk_calloc, R_chk_free, R_chk_realloc}}};
+use crate::{R::Rchar, base::s::{Sexp, SExt, r_type::lib_r::{calloc, free, realloc, malloc}}};
 use macros::*;
 use core::{any::Any, ffi::c_void, fmt::{Debug, Display}, panic::PanicPayload};
 #[cfg(not(test))]
@@ -58,19 +58,20 @@ unsafe impl Sync for SimpleAllocator {}
 unsafe impl GlobalAlloc for SimpleAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         unsafe {
-            R_chk_calloc(layout.size().div_euclid(layout.align()), layout.align()) as *mut u8
+            malloc(layout.size()) as *mut u8
+            // R_chk_calloc(layout.size().div_euclid(layout.align()), layout.align()) as *mut u8
         }
     }
     unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
         unsafe {
-            R_chk_calloc(layout.size().div_euclid(layout.align()), layout.align()) as *mut u8
+            calloc(layout.size().div_euclid(layout.align()), layout.align()) as *mut u8
         }
     }
     unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
-        unsafe { R_chk_free(ptr as *mut c_void) }
+        unsafe { free(ptr as *mut c_void) }
     }
     unsafe fn realloc(&self, ptr: *mut u8, _layout: Layout, new_size: usize) -> *mut u8 {
-        unsafe { R_chk_realloc(ptr as *mut c_void, new_size) as *mut u8 }
+        unsafe { realloc(ptr as *mut c_void, new_size) as *mut u8 }
     }
 }
 

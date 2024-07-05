@@ -1,6 +1,6 @@
 [package]
 name = "rmin"
-version = "0.4.0-pre2"
+version = "0.5.0-pre0"
 edition = "2021"
 description = "A minimal Rust lib for writting R extensions"
 authors = ["Neutron3529 <qweytr1@main.ustc.edu.cn>"]
@@ -26,4 +26,4 @@ rmin-macros-write-r-func-to-out-dir = ["rmin-macros", "rmin-macros/write-r-func-
 
 [dependencies]
 rmin-eh = { version = "0.0.1", path = "../rmin-eh", optional = true }
-rmin-macros = { version = "0.0.4", path = "../rmin-macros", optional = true }
+rmin-macros = { version = "0.0.5", path = "../rmin-macros", optional = true }

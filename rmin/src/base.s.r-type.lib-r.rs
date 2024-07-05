@@ -1,6 +1,6 @@
 #![allow(missing_docs, non_camel_case_types, dead_code)]
 use core::ffi::{c_void, c_int, c_char, c_uint};
-
+type size_t = usize;
 
 #[doc = "R_xlen_t is defined as int on 32-bit platforms, and\n that confuses Rust. Keeping it always as ptrdiff_t works\n fine even on 32-bit.\n <div rustbindgen replaces=\"R_xlen_t\"></div>"]
 pub type R_xlen_t = isize;
@@ -91,19 +91,40 @@ extern "C" {
     #[doc = "These are the public inlinable functions that are provided in\nRinlinedfuns.h It is *essential* that these do not appear in any\nother header file, with or without the Rf_ prefix."]
     pub fn Rf_allocVector(arg1: SEXPTYPE, arg2: R_xlen_t) -> SEXP;
     pub fn Rf_protect(arg1: SEXP) -> SEXP;
+    /// unprotect, only for new protection.
+    /// head <-> *here* <-> tail
+    /// head -> tag1 -> tag2 <-> tail
+    ///          |       |
+    ///          V       V
+    ///    protected    pseudo
+    pub fn Rf_unprotect(arg1: c_int);
     pub fn Rf_unprotect_ptr(arg1: SEXP);
-    #[cfg_attr(doc, doc(cfg(not(have_std))))] #[cfg(not(have_std))]
-    pub fn R_chk_calloc(count: usize, size_and_align: usize) -> *mut c_void;
-    #[cfg_attr(doc, doc(cfg(not(have_std))))] #[cfg(not(have_std))]
-    pub fn R_chk_realloc(ptr: *mut c_void, new_size: usize) -> *mut c_void;
-    #[cfg_attr(doc, doc(cfg(not(have_std))))] #[cfg(not(have_std))]
-    pub fn R_chk_free(ptr: *mut c_void);
-    #[cfg_attr(doc, doc(cfg(not(have_std))))] #[cfg(not(have_std))]
-    pub fn Rprintf(arg1: *const c_char, ...);
+    // #[cfg_attr(doc, doc(cfg(not(have_std))))] #[cfg(not(have_std))]
+    // pub fn R_chk_calloc(count: usize, size_and_align: usize) -> *mut c_void;
+    // #[cfg_attr(doc, doc(cfg(not(have_std))))] #[cfg(not(have_std))]
+    // pub fn R_chk_realloc(ptr: *mut c_void, new_size: usize) -> *mut c_void;
+    // #[cfg_attr(doc, doc(cfg(not(have_std))))] #[cfg(not(have_std))]
+    // pub fn R_chk_free(ptr: *mut c_void);
     pub fn Rf_xlength(arg1: SEXP) -> R_xlen_t;
     pub fn MISSING(x: SEXP) -> c_int;
     pub fn DATAPTR_RO(x: SEXP) -> *const c_void;
     pub fn DATAPTR(x: SEXP) -> *mut c_void;
     pub fn TYPEOF(x: SEXP) -> SEXPTYPE;
     pub static mut R_NilValue:SEXP;
+}
+#[cfg_attr(doc, doc(cfg(not(have_std))))] #[cfg(not(have_std))]
+
+#[link(name = "R", kind = "dylib")]
+#[cfg_attr(doc, doc(cfg(not(have_std))))] #[cfg(not(have_std))]
+extern "C" {
+    pub fn Rprintf(arg1: *const c_char, ...);
+}
+
+#[cfg_attr(doc, doc(cfg(not(have_std))))] #[cfg(not(have_std))]
+extern "C" {
+    pub fn malloc(size: size_t) -> *mut c_void;
+    pub fn calloc(nobj: size_t, size: size_t) -> *mut c_void;
+    pub fn realloc(p: *mut c_void, size: size_t) -> *mut c_void;
+    pub fn free(p: *mut c_void);
+    pub fn posix_memalign(memptr: *mut *mut c_void, align: size_t, size: size_t) -> c_int;
 }
