@@ -1,12 +1,12 @@
 /// minimal low-level libR-sys.
 #[path = "base.s.r-type.lib-r.rs"]
 pub mod lib_r;
-use lib_r::*;
-pub use lib_r::{SEXP, SEXPTYPE};
-use core::ffi::{c_int, c_char};
 use super::Sexp;
 #[cfg(doc)]
-use super::{SExt, Owned, Protected}; // for doc generations
+use super::{Owned, Protected, SExt};
+use core::ffi::{c_char, c_int, c_void};
+use lib_r::*;
+pub use lib_r::{SEXP, SEXPTYPE}; // for doc generations
 /// macros for define additional RType, for crate developer only.
 pub mod macros {
     // pub macro RType(RType=$RType:tt SEXPTYPE=$SEXPTYPE:tt R_xlen_t=$R_xlen_t:tt Rf_allocVector=$Rf_allocVector:tt SEXP=$SEXP:tt, ty=$ty:tt Rty=$Rty:tt RCODE=$RCODE:tt=$RCODEVAL:tt){
@@ -58,7 +58,7 @@ pub mod macros {
         }
     }
 }
-use macros::{RTypeMatrix, trait_def};
+use macros::{trait_def, RTypeMatrix};
 trait_def!(
 /// Basic R data storage type
 ///
@@ -144,6 +144,7 @@ for RTypeMatrix { SEXPTYPE alias define self }
     i32, integer, INTSXP =13 {RDefault RTypeMut};
     f64, numeric, REALSXP=14 {RDefault RTypeMut};
     SEXP, list, VECSXP=19 {RDefault RTypeMut};
+    *mut c_void, externalptr, EXTPTRSXP=22 { };
     Sexp<numeric>:"(Sexp)", numeric_list, VECSXP {RDefault RTypeMut};
     Sexp<integer>:"(Sexp)", integer_list, VECSXP {RDefault RTypeMut};
     Sexp<logical>:"(Sexp)", logical_list, VECSXP {RDefault RTypeMut};
@@ -170,18 +171,18 @@ impl RDefault for NULL {
 /// Indicate whether a [`RType`] could be mutablly indexed.
 pub trait RTypeMut: RType {}
 /// Indicate whether a [`RType`] could be converted from a [`&[Rust]`](core::slice) type.
-pub trait RTypeFrom:RType {
+pub trait RTypeFrom: RType {
     /// create a R copy from rust object.
-    unsafe fn from(data: impl core::convert::AsRef<[<Self as RType>::Data]>)->SEXP;
+    unsafe fn from(data: impl core::convert::AsRef<[<Self as RType>::Data]>) -> SEXP;
 }
-impl<T:RDefault + RTypeMut> RTypeFrom for T {
+impl<T: RDefault + RTypeMut> RTypeFrom for T {
     #[inline(always)]
-    unsafe fn from(data: impl core::convert::AsRef<[<Self as RType>::Data]>)->SEXP {
+    unsafe fn from(data: impl core::convert::AsRef<[<Self as RType>::Data]>) -> SEXP {
         let data = data.as_ref();
         let (src, len) = (data.as_ptr(), data.len());
         unsafe {
             // SAFETY: Since wrapping it is still needed, thus it is safe.
-            let sexp=<T as RType>::new(data.len());
+            let sexp = <T as RType>::new(data.len());
             // SAFETY:
             // get mut pointer to perform
             let dst = <T as RType>::data_mut(sexp);
@@ -199,18 +200,20 @@ impl<T:RDefault + RTypeMut> RTypeFrom for T {
 /// allocate a owned R string object from rust String.
 impl RTypeFrom for Rchar {
     #[inline(always)]
-    unsafe fn from(data: impl core::convert::AsRef<[<Self as RType>::Data]>)->SEXP {
+    unsafe fn from(data: impl core::convert::AsRef<[<Self as RType>::Data]>) -> SEXP {
         let data = data.as_ref();
         // SAFETY: ffi call.
-        unsafe { Rf_mkCharLenCE(
-            data.as_ptr() as *const c_char,
-            data.len() as c_int,
-            cetype_t_CE_UTF8
-        )}
+        unsafe {
+            Rf_mkCharLenCE(
+                data.as_ptr() as *const c_char,
+                data.len() as c_int,
+                cetype_t_CE_UTF8,
+            )
+        }
     }
 }
 /// unsafe trait for [`SEXP`]
-pub trait SEXPext:Copy {
+pub trait SEXPext: Copy {
     /// Protect a [`SEXP`] variable
     ///
     /// It is a really dangerous function that you should not use it at all.
@@ -221,7 +224,7 @@ pub trait SEXPext:Copy {
     /// SAFETY: in case the type is a field of [`Owned<T>`], the result will wrapping in a [`Protected<T>`], then it could be safe.
     ///
     /// Otherwise, use at your own risk.
-    unsafe fn protect(self)->Self;
+    unsafe fn protect(self) -> Self;
 
     /// Unprotect a [`SEXP`] variable
     ///
@@ -238,7 +241,7 @@ pub trait SEXPext:Copy {
     /// get stype
     /// SAFETY: this function should be safe, but the previous function `*.as_sexp()` could be unsafe.
     /// Mark it as unsafe since using `[SExt::stype]` might be better.
-    unsafe fn stype(self)->SEXPTYPE;
+    unsafe fn stype(self) -> SEXPTYPE;
 
     /// get length of a SEXP type.
     /// SAFETY: this function should be safe, but the previous function `*.as_sexp()` could be unsafe.
@@ -248,22 +251,28 @@ pub trait SEXPext:Copy {
     /// get whether self is missing.
     /// it seems that, return 0 means the value is not missing, but I'm not sure.
     unsafe fn missing(self) -> c_int;
+
+    /// get attr from SEXP
+    unsafe fn get_attr(self, attr: SEXP) -> SEXP;
+
+    /// get attr from SEXP
+    unsafe fn set_attr(self, attr: SEXP, val: SEXP) -> SEXP;
 }
 impl SEXPext for SEXP {
     #[inline(always)]
-    unsafe fn protect(self)->Self {
+    unsafe fn protect(self) -> Self {
         // SAFETY: FFi calls.
-        unsafe {Rf_protect(self)}
+        unsafe { Rf_protect(self) }
     }
     #[inline(always)]
     unsafe fn unprotect(self) {
         // SAFETY: FFi calls.
-        unsafe {Rf_unprotect_ptr(self)}
+        unsafe { Rf_unprotect_ptr(self) }
     }
     #[inline(always)]
-    unsafe fn stype(self)->SEXPTYPE {
+    unsafe fn stype(self) -> SEXPTYPE {
         // SAFETY: FFi calls.
-        unsafe {TYPEOF(self)}
+        unsafe { TYPEOF(self) }
     }
     #[inline(always)]
     unsafe fn len(self) -> R_xlen_t {
@@ -273,8 +282,15 @@ impl SEXPext for SEXP {
     unsafe fn missing(self) -> c_int {
         unsafe { MISSING(self) }
     }
+    #[inline(always)]
+    unsafe fn get_attr(self, slot: SEXP) -> SEXP {
+        unsafe { Rf_getAttrib(self, slot) }
+    }
+    #[inline(always)]
+    unsafe fn set_attr(self, slot: SEXP, val: SEXP) -> SEXP {
+        unsafe { Rf_setAttrib(self, slot, val) }
+    }
 }
-
 
 /// REALLY UNSAFE FUNCTION
 ///
@@ -291,15 +307,16 @@ impl SEXPext for SEXP {
 /// To be specific, at the end of an FFI call, after call drop
 /// to anything you could call.
 /// Otherwise, memory leak may happens by the longjmp instruction in the R internal `Rf_error` function.
-pub unsafe fn error(message:*const Rchar)->!{
+pub unsafe fn error(message: *const Rchar) -> ! {
     unsafe { Rf_errorcall(lib_r::R_CurrentExpression, FMT, message as *const c_char) }
 }
 /// print function used in `no_std` mode, for `std` user, println! should be better.
-#[cfg_attr(doc,doc(cfg(not(have_std))))] #[cfg(not(have_std))]
-pub unsafe fn print(message:*const Rchar){
+#[cfg_attr(doc, doc(cfg(not(have_std))))]
+#[cfg(not(have_std))]
+pub unsafe fn print(message: *const Rchar) {
     // SAFETY: FMT is add to ensure the code is well-encoded
     unsafe { Rprintf(FMT, message as *const c_char) }
 }
 
 /// formatter avoid %s being translated.
-pub const FMT:*const c_char=b"%s\0" as *const u8 as *const c_char;
+pub const FMT: *const c_char = b"%s\0" as *const u8 as *const c_char;

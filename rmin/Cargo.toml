@@ -9,7 +9,10 @@ repository = "https://github.com/Neutron3529/rmin"
 
 
 [features]
-default = ["core", "panic-info-message", "rmin-macros-warning", "rmin-macros-write-r-func-to-out-dir"]
+default = ["core", "busybox", "rmin-macros-warning", "rmin-macros-write-r-func-to-out-dir", ]
+busybox = ["panic-info-message", "const_type_name"]
+const_type_name = []
+create_new_class_symbol = [] # For really old R that has no R_ClassSymbol
 public-by-default-even-public-all-is-not-set = []
 std = ["rmin-macros?/std"]
 core = ["rmin-eh", "rmin-macros?/no-std"]

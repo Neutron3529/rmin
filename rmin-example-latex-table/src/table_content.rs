@@ -46,34 +46,41 @@ impl TableContent {
 }
 impl Display for TableContent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut iter = self.template_rows.names.iter().chain(self.data_rows.names.iter());
+        let mut iter = self
+            .template_rows
+            .names
+            .iter()
+            .chain(self.data_rows.names.iter());
         if let Some(item) = iter.next_back() {
             write!(f, "\n        ")?;
             for item in iter {
-                write!(f,"{item} & ")?
+                write!(f, "{item} & ")?
             }
-            write!(f,r"{item}\\")?
+            write!(f, r"{item}\\")?
         }
         let col_len = self.col_name.len();
         let row_len = self.data_rows.names.len();
         if col_len * row_len != self.data.len() {
-            write!(f,"%<Error: template accept {col_len} x {row_len} matrix, but only {} provided>", self.data.len())?;
+            write!(
+                f,
+                "%<Error: template accept {col_len} x {row_len} matrix, but only {} provided>",
+                self.data.len()
+            )?;
         } else {
             let mut data = Data::from(&self.data);
-            
+
             for j in 0..row_len {
                 let r = &self.data_rows.rows[j];
                 for i in 0..col_len {
-                    data[j*col_len + i].rounding = r.ifn.rounding;
-                    data[j*col_len + i].as_percentage = r.ifn.as_percentage;
+                    data[j * col_len + i].rounding = r.ifn.rounding;
+                    data[j * col_len + i].as_percentage = r.ifn.as_percentage;
                 }
             }
-            
-            
+
             for i in 0..col_len {
                 write!(f, "\n        {} & ", self.col_name[i])?;
                 for j in 0..row_len {
-                    write!(f,"{}", data[i+j*col_len])?;
+                    write!(f, "{}", data[i + j * col_len])?;
                     if j != row_len - 1 {
                         write!(f, " & ")?
                     } else {

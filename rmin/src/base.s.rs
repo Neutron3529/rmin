@@ -3,11 +3,22 @@
 /// Should be invisible for users
 #[path = "base.s.r-type.rs"]
 pub mod r_type;
-use r_type::{RType, RTypeMut, RDefault, RTypeFrom, error, alias::*, SEXPext, SEXP, SEXPTYPE};
-#[cfg(not(have_std))]
-use {r_type::print, crate::String};
+use r_type::{
+    alias::*,
+    error,
+    lib_r::{
+        R_ClassSymbol, R_ExternalPtrAddr, R_MakeExternalPtr, R_NilValue, R_RegisterCFinalizer, Rf_setAttrib
+    },
+    RDefault, RType, RTypeFrom, RTypeMut, SEXPext, SEXP, SEXPTYPE,
+};
+
 #[cfg(doc)]
-use r_type::define::*; // for doc;
+use r_type::define::*;
+#[cfg(not(have_std))]
+use {
+    crate::Box,
+    r_type::print,
+}; // for doc;
 /// impl Index and IndexMut for a type.
 pub mod macros {
     /// internal impl.
@@ -34,8 +45,8 @@ pub mod macros {
         )*
     }
 }
+use core::{ffi::c_void, marker::PhantomData};
 use macros::impl_sext_index;
-use core::marker::PhantomData;
 #[derive(Copy, Clone)]
 /// ReadOnly [`SEXP`], should not be changed.
 ///
@@ -67,6 +78,67 @@ impl<T: RType> Owned<T> {
         self.into()
     }
 }
+
+/// a trait for handling S4 objects.
+/// This trait will convert Rust objects into S4 objects with registering its finalizer.
+pub trait S4: Sized + 'static {
+    // /// The class R will used (if it is not empty)
+    // const R_CLASS: &'static str = "";
+    /// The class name S4 method will use.
+    #[cfg(feature = "const_type_name")]
+    const CLASS_NAME: &'static str = core::any::type_name::<Self>();
+    /// The class name S4 method will use.
+    #[cfg(not(feature = "const_type_name"))]
+    const CLASS_NAME: &'static str;
+    /// boxing self and converting it into externalptr
+    fn boxed_to_sexp(self) -> Owned<externalptr> {
+        Box::new(self).into_sexp()
+    }
+    /// convert boxed self into externalptr
+    fn into_sexp(self: Box<Self>) -> Owned<externalptr> {
+        #[cfg(feature = "create_new_class_symbol")]
+        #[allow(non_snake_case)]
+        let R_ClassSymbol = unsafe {
+            Owned::raw_from_str("class")
+                .protect()
+                .as_sexp(Owned::raw_from_str(<Self as S4>::CLASS_NAME).protect())
+        };
+        let name = Owned::raw_from_str(<Self as S4>::CLASS_NAME).protect();
+        // let name = if <Self as S4>::R_CLASS == "" {
+        // } else {
+        //     Protected::<character>::raw_from_strs([<Self as S4>::R_CLASS, <Self as S4>::CLASS_NAME].iter())
+        // };
+        let ret = Owned::<externalptr> {
+            sexp: unsafe {
+                R_MakeExternalPtr(Box::into_raw(self) as *mut c_void, R_NilValue, R_NilValue)
+            },
+            _marker: [],
+        }
+        .protect();
+        unsafe { R_RegisterCFinalizer(ret.sexp, <Self as S4>::fin) }
+        unsafe { Rf_setAttrib(ret.sexp, R_ClassSymbol, name.sexp) };
+        ret.into()
+    }
+    /// Finalizer, might not be called.
+    extern "C" fn fin(item: SEXP) {
+        #[cfg(feature = "create_new_class_symbol")]
+        #[allow(non_snake_case)]
+        let R_ClassSymbol = unsafe { Owned::raw_from_str("class").protect().as_sexp() };
+        // let class : Owned<Rchar> = unsafe {Owned{sexp:item.get_attr(R_ClassSymbol),_marker:[]}};
+
+        // if class.len() == 0 {
+        //     panic!("Expect class {CLASS_NAME}, but an object with no class specific is sent to the finalizer!", CLASS_NAME = <Self as S4>::CLASS_NAME);
+        // } else if class[0] != <Self as S4>::CLASS_NAME {
+        //     panic!("Expect class {CLASS_NAME}, but class[0] = {} is sent to the finalizer!", class[0], CLASS_NAME = <Self as S4>::CLASS_NAME)
+        // } else {
+        //     // SAFETY: the pointer is created from Rust and not dropped (since into_sexp requires it directly)
+        //     // Thus dereference it is safe.
+        //     let item =  unsafe {*{R_ExternalPtrAddr(item) as *mut Self}}; // then safely drops it.
+        // }
+        drop(unsafe { Box::from_raw(R_ExternalPtrAddr(item) as *mut Self) })
+    }
+}
+
 /// Protected [`SEXP`], should not be transferred across FFI boundary.
 ///
 /// Since return a protected vector back to R will cause memory leak, this struct is marked as private
@@ -100,9 +172,9 @@ pub trait SExt: Sized {
     unsafe fn as_sexp(&self) -> SEXP;
 
     /// got [`SEXPTYPE`]((r_type::SEXPTYPE)) of the wrapped [`SEXP`] type.
-    fn stype(&self)->SEXPTYPE {
+    fn stype(&self) -> SEXPTYPE {
         // SAFETY: sexp send directly to R FFI.
-        unsafe {self.as_sexp().stype()}
+        unsafe { self.as_sexp().stype() }
     }
 
     /// allocate a new [`SEXP`] object with length, and protect it immeditely
@@ -111,11 +183,11 @@ pub trait SExt: Sized {
     /// thus for [`CHARSXP`], it accepts a &str object.
     fn new(len: usize) -> Protected<Self::Data>
     where
-    Self::Data: RDefault,
+        Self::Data: RDefault,
     {
         Protected::<Self::Data> {
             // SAFETY: wrap and protect the sexp, thus safe.
-            sexp: unsafe {<Self::Data as RType>::new(len).protect()},
+            sexp: unsafe { <Self::Data as RType>::new(len).protect() },
             _marker: [],
         }
         .into()
@@ -127,10 +199,10 @@ pub trait SExt: Sized {
     /// thus for [`CHARSXP`], it accepts a &str object.
     fn raw(len: usize) -> Owned<Self::Data>
     where
-    Self::Data: RDefault,
+        Self::Data: RDefault,
     {
         Owned::<Self::Data> {
-            sexp: unsafe {<Self::Data as RType>::new(len)},
+            sexp: unsafe { <Self::Data as RType>::new(len) },
             _marker: [],
         }
     }
@@ -138,13 +210,13 @@ pub trait SExt: Sized {
     /// Create a protected R copy from rust object.
     ///
     /// The returned pointer is protected.
-    fn from(data: impl core::convert::AsRef<[<Self::Data as RType>::Data]>) -> Protected<Self::Data>
+    fn from(data: impl AsRef<[<Self::Data as RType>::Data]>) -> Protected<Self::Data>
     where
-    Self::Data: RTypeFrom,
+        Self::Data: RTypeFrom,
     {
         Protected::<Self::Data> {
             // SAFETY: wrap and protect the sexp, thus safe.
-            sexp: unsafe {<Self::Data as RType>::from(data)},
+            sexp: unsafe { <Self::Data as RType>::from(data) },
             _marker: [],
         }
         .into()
@@ -153,12 +225,12 @@ pub trait SExt: Sized {
     /// Create a unprotected R copy from rust object.
     ///
     /// The returned pointer is unprotected.
-    fn raw_from(data: impl core::convert::AsRef<[<Self::Data as RType>::Data]>) -> Owned<Self::Data>
+    fn raw_from(data: impl AsRef<[<Self::Data as RType>::Data]>) -> Owned<Self::Data>
     where
-    Self::Data: RTypeFrom,
+        Self::Data: RTypeFrom,
     {
         Owned::<Self::Data> {
-            sexp: unsafe {<Self::Data as RType>::from(data)},
+            sexp: unsafe { <Self::Data as RType>::from(data) },
             _marker: [],
         }
     }
@@ -192,7 +264,7 @@ pub trait SExt: Sized {
     #[inline(always)]
     fn len(&self) -> usize {
         // SAFETY: stype is a R FFI call.
-        unsafe {self.as_sexp().len() as usize}
+        unsafe { self.as_sexp().len() as usize }
     }
     /// got the read-only data of a [`SEXP`] object
     ///
@@ -270,19 +342,21 @@ pub trait SExt: Sized {
         }
     }
 }
-impl<T:RType> Sexp<T> {
+impl<T: RType> Sexp<T> {
     /// indicate whether a sexp is missing, should call manually.
     /// This function is not provided to [`Owned`] or [`Protected`], since they are allocated by Rust and should not missing.
     #[inline(always)]
-    pub fn missing(&self) -> bool { // only Sexp may missing.
+    pub fn missing(&self) -> bool {
+        // only Sexp may missing.
         // SAFETY: ffi.
         self.missingness() != 0
     }
     /// wrapper for R `MISSING` function.
     #[inline(always)]
-    pub fn missingness(&self) -> i32 { // only Sexp may missing.
+    pub fn missingness(&self) -> i32 {
+        // only Sexp may missing.
         // SAFETY: ffi.
-        unsafe {self.as_sexp().missing() as i32}
+        unsafe { self.as_sexp().missing() as i32 }
     }
 }
 /// A marker suggeest whether the SEXP is mutable
@@ -347,8 +421,8 @@ impl Sexp<Rchar> {
     /// REALLY UNSAFE FUNCTION
     ///
     /// see [`error`] for more informations.
-    pub unsafe fn error(self)->!{
-        unsafe {error(Rchar::data(self.as_sexp()))}
+    pub unsafe fn error(self) -> ! {
+        unsafe { error(Rchar::data(self.as_sexp())) }
     }
     /// print the content to R... with R's print function. Only available in no_std mode
     ///
@@ -356,21 +430,38 @@ impl Sexp<Rchar> {
 
     #[cfg_attr(doc, doc(cfg(not(have_std))))]
     #[cfg(not(have_std))]
-    pub fn print(self){
+    pub fn print(self) {
         // SAFETY: ffi calls, the input type is Rchar with `\0` terminator, thus is OK.
-        unsafe {print(Rchar::data(self.as_sexp()))}
+        unsafe { print(Rchar::data(self.as_sexp())) }
     }
 }
 
+impl Protected<character> {
+    fn raw_from_strs(a: impl ExactSizeIterator<Item:AsRef<[u8]>>) -> Self {
+        let mut ret = Owned{sexp: unsafe {<character as RType>::new(a.len())}, _marker:[]}.protect();
+        let item = ret.data_mut();
+        item.iter_mut().zip(a).for_each(|(i,a)|*i=Owned::raw_from(a).into());
+        ret
+    }
+}
 
 impl Owned<character> {
     /// simple wrapper for chants that could generate a STRSXP (with length 1) quickly.
-    pub fn raw_from_str(a:impl Into<String>)->Self{
-        Self::raw_from([<Owned<Rchar> as Into<Sexp<Rchar>>>::into(Owned::raw_from(a.into()))])
+    pub fn raw_from_strs(a: impl ExactSizeIterator<Item:AsRef<[u8]>>) -> Self {
+        Protected::<character>::raw_from_strs(a).into()
+    }
+    /// simple wrapper for chants that could generate a STRSXP (with length 1) quickly.
+    pub fn raw_from_str(a: impl AsRef<[u8]>) -> Self {
+        Self::raw_from([<Owned<Rchar> as Into<Sexp<Rchar>>>::into(Owned::raw_from(
+            a,
+        ))])
     }
     /// Nothing more than a notation.
-    #[deprecated(since = "0.0.0", note = "Please use `raw_from_str` to ensure you are generate a `raw Owned` rather than `normal protected` type.")]
-    pub fn from_str(a:impl Into<String>)->Self{
+    #[deprecated(
+        since = "0.0.0",
+        note = "Please use `raw_from_str` to ensure you are generate a `raw Owned` rather than `normal protected` type."
+    )]
+    pub fn from_str(a: impl AsRef<[u8]>) -> Self {
         Self::raw_from_str(a)
     }
 }

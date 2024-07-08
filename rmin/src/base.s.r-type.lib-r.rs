@@ -1,5 +1,5 @@
 #![allow(missing_docs, non_camel_case_types, dead_code)]
-use core::ffi::{c_void, c_int, c_char, c_uint};
+use core::ffi::{c_char, c_int, c_uint, c_void};
 type size_t = usize;
 
 #[doc = "R_xlen_t is defined as int on 32-bit platforms, and\n that confuses Rust. Keeping it always as ptrdiff_t works\n fine even on 32-bit.\n <div rustbindgen replaces=\"R_xlen_t\"></div>"]
@@ -15,12 +15,12 @@ pub type R_xlen_t = isize;
 ///     rmin::reg::R_CallMethodDef {name:core::ptr::null(), fun:None, numArgs:0}
 /// ];
 /// ```
-#[cfg_attr(doc,doc(cfg(feature = "register-routines")))]
+#[cfg_attr(doc, doc(cfg(feature = "register-routines")))]
 #[cfg(any(doc, feature = "register-routines"))]
 pub type DL_FUNC = *const c_void;
 
 #[repr(C)]
-#[cfg_attr(doc,doc(cfg(feature = "register-routines")))]
+#[cfg_attr(doc, doc(cfg(feature = "register-routines")))]
 #[cfg(any(doc, feature = "register-routines"))]
 pub struct R_CallMethodDef {
     pub name: *const c_char,
@@ -61,32 +61,28 @@ pub const cetype_t_CE_UTF8: u32 = 1;
 // pub type Rboolean = u32;
 #[link(name = "R", kind = "dylib")]
 extern "C-unwind" {
-    pub fn Rf_errorcall(call:SEXP, error: *const c_char, ...) -> !; // avoid the possible copy.
-    // pub fn Rf_error(error: *const c_char, ...) -> !;
-    pub fn Rf_mkCharLenCE(
-        data: *const c_char,
-        len: c_int,
-        enc: cetype_t,
-    ) -> SEXP; // unwind while data contains '\0'
+    pub fn Rf_errorcall(call: SEXP, error: *const c_char, ...) -> !; // avoid the possible copy.
+                                                                     // pub fn Rf_error(error: *const c_char, ...) -> !;
+    pub fn Rf_mkCharLenCE(data: *const c_char, len: c_int, enc: cetype_t) -> SEXP; // unwind while data contains '\0'
 }
 #[link(name = "R", kind = "dylib")]
 extern "C" {
     /// for register-routines feature.
-    #[cfg_attr(doc,doc(cfg(feature = "register-routines")))]
+    #[cfg_attr(doc, doc(cfg(feature = "register-routines")))]
     #[cfg(any(doc, feature = "register-routines"))]
     pub fn R_registerRoutines(
         info: *mut DllInfo,
         croutines: *const c_void,
         callRoutines: *const R_CallMethodDef,
         fortranRoutines: *const c_void,
-        externalRoutines: *const c_void
+        externalRoutines: *const c_void,
     ) -> c_int;
-    #[cfg_attr(doc,doc(cfg(feature = "register-routines")))]
+    #[cfg_attr(doc, doc(cfg(feature = "register-routines")))]
     #[cfg(any(doc, feature = "register-routines"))]
-    pub fn R_useDynamicSymbols(dll:*mut DllInfo, flag:c_uint)->c_uint;
-    #[cfg_attr(doc,doc(cfg(feature = "register-routines")))]
+    pub fn R_useDynamicSymbols(dll: *mut DllInfo, flag: c_uint) -> c_uint;
+    #[cfg_attr(doc, doc(cfg(feature = "register-routines")))]
     #[cfg(any(doc, feature = "register-routines"))]
-    pub fn R_forceSymbols(dll:*mut DllInfo, flag:c_uint)->c_uint;
+    pub fn R_forceSymbols(dll: *mut DllInfo, flag: c_uint) -> c_uint;
     pub static mut R_CurrentExpression: SEXP;
     #[doc = "These are the public inlinable functions that are provided in\nRinlinedfuns.h It is *essential* that these do not appear in any\nother header file, with or without the Rf_ prefix."]
     pub fn Rf_allocVector(arg1: SEXPTYPE, arg2: R_xlen_t) -> SEXP;
@@ -110,17 +106,27 @@ extern "C" {
     pub fn DATAPTR_RO(x: SEXP) -> *const c_void;
     pub fn DATAPTR(x: SEXP) -> *mut c_void;
     pub fn TYPEOF(x: SEXP) -> SEXPTYPE;
-    pub static mut R_NilValue:SEXP;
-}
-#[cfg_attr(doc, doc(cfg(not(have_std))))] #[cfg(not(have_std))]
+    pub static mut R_NilValue: SEXP;
+    pub static mut R_ClassSymbol: SEXP;
+    pub fn R_MakeExternalPtr(p: *mut c_void, tag: SEXP, prot: SEXP) -> SEXP;
+    pub fn R_ExternalPtrTag(s: SEXP) -> SEXP;
+    pub fn R_ExternalPtrAddr(s: SEXP) -> *mut c_void;
+    pub fn Rf_getAttrib(item: SEXP, slot: SEXP) -> SEXP;
+    pub fn Rf_setAttrib(item: SEXP, slot: SEXP, val: SEXP) -> SEXP;
+    pub fn R_RegisterCFinalizer(s: SEXP, fun: extern "C" fn(SEXP) -> ());
 
+}
+#[cfg_attr(doc, doc(cfg(not(have_std))))]
+#[cfg(not(have_std))]
 #[link(name = "R", kind = "dylib")]
-#[cfg_attr(doc, doc(cfg(not(have_std))))] #[cfg(not(have_std))]
+#[cfg_attr(doc, doc(cfg(not(have_std))))]
+#[cfg(not(have_std))]
 extern "C" {
     pub fn Rprintf(arg1: *const c_char, ...);
 }
 
-#[cfg_attr(doc, doc(cfg(not(have_std))))] #[cfg(not(have_std))]
+#[cfg_attr(doc, doc(cfg(not(have_std))))]
+#[cfg(not(have_std))]
 extern "C" {
     pub fn malloc(size: size_t) -> *mut c_void;
     pub fn calloc(nobj: size_t, size: size_t) -> *mut c_void;

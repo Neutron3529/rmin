@@ -11,7 +11,11 @@ fn add(a: Sexp<f64>, b: Sexp<f64>) -> Owned<f64> {
 pub extern "C" fn add_noprotect(a: Sexp<f64>, b: Sexp<f64>) -> Owned<f64> {
     handle_panic(|| {
         if a.missing() || b.missing() {
-            panic!("Parameter missing detected, a:{} b:{}",a.missing(), b.missing())
+            panic!(
+                "Parameter missing detected, a:{} b:{}",
+                a.missing(),
+                b.missing()
+            )
         }
         let mut c = Owned::raw(1);
         c[0] = a[0] + b[0];
@@ -35,16 +39,16 @@ pub extern "C" fn protect_and_unprotect(a: Owned<i32>, b: Owned<i32>) -> Owned<(
 
 /// raise panic.
 #[no_mangle]
-pub extern "C" fn panic(a:Sexp<i32>) -> Owned<f64> {
+pub extern "C" fn panic(a: Sexp<i32>) -> Owned<f64> {
     handle_panic(|| {
         #[derive(Debug)]
         struct Guard();
         impl Drop for Guard {
-            fn drop(&mut self){
+            fn drop(&mut self) {
                 println!("%Guard dropped%.")
             }
         }
-        let g=Guard();
+        let g = Guard();
         if a.missing() {
             panic!("%error occurs%d.")
         }

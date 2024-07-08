@@ -151,8 +151,11 @@ export LOAD="dyn.load('target/release/examples/libcompare_rmin.so');addnp=getNat
     // feature(c_unwind,impl_trait_in_assoc_type),
     no_std
 )]
-
-#![cfg_attr(all(not(have_std), feature="panic-info-message"), feature(panic_info_message) )]
+#![cfg_attr(feature = "const_type_name", feature(const_type_name))]
+#![cfg_attr(
+    all(not(have_std), feature = "panic-info-message"),
+    feature(panic_info_message)
+)]
 #![feature(decl_macro)]
 #![cfg_attr(any(doc, test), feature(doc_cfg, rustdoc_missing_doc_code_examples))]
 #![warn(
@@ -252,7 +255,7 @@ pub mod prelude {
     #[doc(inline)]
     pub use crate::base::{
         handle_panic,
-        s::{Owned, SExt, Sexp},
+        s::{Owned, SExt, Sexp, S4},
     };
 
     #[doc(inline)]
@@ -269,22 +272,27 @@ pub mod prelude {
     #[doc(inline)]
     #[cfg(not(have_std))]
     #[cfg_attr(doc, doc(cfg(not(have_std))))]
-    pub use crate::base::no_std::{String, ToString, Vec, Box, macros::{format, println}};
+    pub use crate::base::no_std::{
+        macros::{format, println},
+        Box, String, ToString, Vec,
+    };
 
     /// a simple (re-exported) module for R routines registration.
-    #[cfg_attr(doc,doc(cfg(feature = "register-routines")))]
+    #[cfg_attr(doc, doc(cfg(feature = "register-routines")))]
     #[cfg(any(doc, feature = "register-routines"))]
     pub mod reg {
-        pub use crate::base::s::r_type::lib_r::{R_CallMethodDef, R_registerRoutines, DllInfo, R_useDynamicSymbols, R_forceSymbols};
+        pub use crate::base::s::r_type::lib_r::{
+            DllInfo, R_CallMethodDef, R_forceSymbols, R_registerRoutines, R_useDynamicSymbols,
+        };
     }
     /// re-exported macros: done
     #[doc(inline)]
-    #[cfg_attr(doc,doc(cfg(feature = "rmin-macros")))]
+    #[cfg_attr(doc, doc(cfg(feature = "rmin-macros")))]
     #[cfg(any(doc, feature = "rmin-macros"))]
     pub use rmin_macros::done;
     /// re-exported macros: export
     #[doc(inline)]
-    #[cfg_attr(doc,doc(cfg(feature = "rmin-macros")))]
+    #[cfg_attr(doc, doc(cfg(feature = "rmin-macros")))]
     #[cfg(any(doc, feature = "rmin-macros"))]
     pub use rmin_macros::export;
 }

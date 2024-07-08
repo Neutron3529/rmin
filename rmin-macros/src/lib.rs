@@ -1,9 +1,9 @@
-use proc_macro::{*,TokenTree::{*}};
+use core::{ops::DerefMut, str::FromStr};
+use proc_macro::{TokenTree::*, *};
 use std::sync::Mutex;
-use core::{str::FromStr, ops::DerefMut};
 static FUNCS: Mutex<Vec<Meta>> = Mutex::new(Vec::new());
 #[cfg(feature = "write-r-func-to-out-dir")]
-const R_SCRIPT_NAME:&str = "aaa.rmin.Rust.Functions.R";
+const R_SCRIPT_NAME: &str = "aaa.rmin.Rust.Functions.R";
 
 #[derive(Default)]
 struct Flag(
@@ -11,14 +11,14 @@ struct Flag(
 );
 #[derive(Clone)]
 struct Meta {
-    params:Vec<[String;2]>
+    params: Vec<[String; 2]>,
 }
 impl Meta {
-    fn fname(&self)->&str {
+    fn fname(&self) -> &str {
         &self.params[0][0]
     }
     #[cfg(feature = "write-r-func-to-out-dir")]
-    fn doc(&self)->&str {
+    fn doc(&self) -> &str {
         &self.params[0][1]
     }
     fn name(&self) -> &str {
@@ -26,24 +26,39 @@ impl Meta {
     }
     fn safe_name(&self) -> String {
         #[cfg(feature = "camel-ass")]
-        format!{"_rUST_{}_wRAPPER_" , self.name()}
+        format! {"_rUST_{}_wRAPPER_" , self.name()}
         #[cfg(not(feature = "camel-ass"))]
-        format!("_rust_{}_wrapper_" , self.name())
+        format!("_rust_{}_wrapper_", self.name())
     }
     fn unsafe_name(&self) -> String {
         #[cfg(feature = "camel-ass")]
-        format!{"_rUST_{}_wRAPPER_uNSAFE_" , self.name()}
+        format! {"_rUST_{}_wRAPPER_uNSAFE_" , self.name()}
         #[cfg(not(feature = "camel-ass"))]
-        format!("_rust_{}_wrapper_unsafe_" , self.name())
+        format!("_rust_{}_wrapper_unsafe_", self.name())
     }
     fn param(&self) -> String {
-        self.params.iter().skip(1).map(|x|x[0].clone()).collect::<Vec<_>>().join(", ")
+        self.params
+            .iter()
+            .skip(1)
+            .map(|x| x[0].clone())
+            .collect::<Vec<_>>()
+            .join(", ")
     }
-    fn param_check(&self, delim:&str) -> String {
-        self.params.iter().skip(1).map(|x|format!("{}.missing()",x[0])).collect::<Vec<_>>().join(delim)
+    fn param_check(&self, delim: &str) -> String {
+        self.params
+            .iter()
+            .skip(1)
+            .map(|x| format!("{}.missing()", x[0]))
+            .collect::<Vec<_>>()
+            .join(delim)
     }
     fn param_check_report(&self) -> String {
-        self.params.iter().skip(1).map(|x|format!("  missing {}: {{}}",x[0])).collect::<Vec<_>>().join("\n")
+        self.params
+            .iter()
+            .skip(1)
+            .map(|x| format!("  missing {}: {{}}", x[0]))
+            .collect::<Vec<_>>()
+            .join("\n")
     }
     fn len(&self) -> usize {
         self.params.len().wrapping_sub(1)
@@ -51,15 +66,16 @@ impl Meta {
 }
 
 impl Flag {
-    fn new()->Self{Default::default()}
-    fn flag(&mut self, flag:String){
+    fn new() -> Self {
+        Default::default()
+    }
+    fn flag(&mut self, flag: String) {
         todo!("{flag} is not a legal switch")
     }
 }
-fn add<T:Into<TokenTree>+Clone>(a:&mut TokenStream, b:&T){
+fn add<T: Into<TokenTree> + Clone>(a: &mut TokenStream, b: &T) {
     a.extend(<TokenTree as Into<TokenStream>>::into((b.clone()).into()).into_iter())
 }
-
 
 mod get_name;
 use get_name::get_meta;
@@ -68,11 +84,18 @@ use get_sig::get_sig;
 
 #[proc_macro_attribute]
 pub fn export(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let attr=attr.into_iter().collect::<Vec<_>>();
-    let mut flags=Flag::new();
+    let attr = attr.into_iter().collect::<Vec<_>>();
+    let mut flags = Flag::new();
     let mut keep = Vec::new();
-    if attr.len()>0 {
-        attr.split(|x|if let Punct(y)=x {y.as_char()==','} else {false}).for_each(|x|{
+    if attr.len() > 0 {
+        attr.split(|x| {
+            if let Punct(y) = x {
+                y.as_char() == ','
+            } else {
+                false
+            }
+        })
+        .for_each(|x| {
             if x.len() == 0 {
                 println!("warning: ignore empty attribute.")
             } else if x.len() == 1 {
@@ -80,8 +103,8 @@ pub fn export(attr: TokenStream, item: TokenStream) -> TokenStream {
             } else {
                 let key = x[0].to_string();
                 match key.as_str() {
-                    "keep" => keep.extend(x[2..].iter().map(|x|x.to_string())),
-                    _=> println!("unknown key {}",x[0])
+                    "keep" => keep.extend(x[2..].iter().map(|x| x.to_string())),
+                    _ => println!("unknown key {}", x[0]),
                 }
             }
         });
@@ -94,19 +117,22 @@ pub fn export(attr: TokenStream, item: TokenStream) -> TokenStream {
         println!("attr is {keep:?}");
     }
 
-    let mut ret = TokenStream::from_str("#[inline(always)]").expect("FATAL, quote system does not function.");
+    let mut ret =
+        TokenStream::from_str("#[inline(always)]").expect("FATAL, quote system does not function.");
     let mut iter = item.into_iter();
 
     // before: @ ..... fn name (params) -> out {...}
     let mut meta = get_meta(&mut ret, &mut iter);
     // after : ..... fn name @ (params) -> out {...} // finding the first fn and read name
     // before:      ... name @ (params) -> out {...}
-    let (sig,params) = get_sig(&mut ret, &mut iter);
+    let (sig, params) = get_sig(&mut ret, &mut iter);
     // after :      ... name (params) -> out @ {...} // finding the first {...}
 
-
     #[cfg(feature = "verbose-output")]
-    println!("got fn_name = {fname}, sig = `{sig}`, params = {params:?}", fname = meta.fname());
+    println!(
+        "got fn_name = {fname}, sig = `{sig}`, params = {params:?}",
+        fname = meta.fname()
+    );
 
     meta.params.extend(params);
 
@@ -131,15 +157,24 @@ pub fn export(attr: TokenStream, item: TokenStream) -> TokenStream {
     let check = meta.param_check(" || ");
     let check_vals = meta.param_check(", ");
     let report = meta.param_check_report();
-    let safe_variant = if check.len()>0 {format!(r#"
+    let safe_variant = if check.len() > 0 {
+        format!(
+            r#"
             if {check} {{
                 rmin::handle_panic(||panic!("Parameter missing detected\n{report}", {check_vals}))
             }} else {{
                 {usafe}_{n}({param})
-            }}"#) } else {format!(r#"
-            {usafe}_{n}({param})"#)};
+            }}"#
+        )
+    } else {
+        format!(
+            r#"
+            {usafe}_{n}({param})"#
+        )
+    };
 
-    let expanded = format!(r#"
+    let expanded = format!(
+        r#"
     mod {fname} {{
         use super::*;
         #[no_mangle]
@@ -149,7 +184,8 @@ pub fn export(attr: TokenStream, item: TokenStream) -> TokenStream {
         extern fn {usafe}_{n} {sig} {{
             rmin::handle_panic(||{fname}({param}))
         }}
-    }}"#);
+    }}"#
+    );
     #[cfg(feature = "verbose-output")]
     println!("#[export] writting additional mod: {expanded}");
     let res = TokenStream::from_str(&expanded).unwrap_or_else(|err|panic!("macro auto expand to {expanded}, there should be an unexpected error: {err:?}. File an issue please."));
@@ -164,24 +200,46 @@ pub fn done(input: TokenStream) -> TokenStream {
         s.to_string()
     } else {
         println!("Warning: CARGO_PKG_NAME is not set. should provide a crate name.");
-        return Default::default()
+        return Default::default();
     };
 
     finalize(crate_name)
 }
-fn finalize(crate_name:String) -> TokenStream {
+fn finalize(crate_name: String) -> TokenStream {
     let data = core::mem::take(FUNCS.lock().expect("fatal error: internal errors while reading static variable FUNCS, compile again might help, file an issue might also help.").deref_mut());
-    if data.len()==0 {
+    if data.len() == 0 {
         println!("warning: no fn could be done, abort processing.");
         return Default::default();
     }
     // data.sort_unstable_by(|a,b|a.name.cmp(&b.name));
-    let iter=data.iter().enumerate().map(|(n,x)|(n as isize,x.safe_name(),x.len())).chain(data.iter().enumerate().map(|(n,x)|(!(n as isize),x.unsafe_name(),x.len())));
+    let iter = data
+        .iter()
+        .enumerate()
+        .map(|(n, x)| (n as isize, x.safe_name(), x.len()))
+        .chain(
+            data.iter()
+                .enumerate()
+                .map(|(n, x)| (!(n as isize), x.unsafe_name(), x.len())),
+        );
     let dlls=iter.clone().map(|(n,name, cntr)|format!(r#"        R_CallMethodDef {{name:c".{prefix}{cname}".as_ptr(), fun:{name}_{n} as *const _, numArgs: {cntr}}},
 "#,cname = if n<0{!n} else {n}, prefix = if n <0 {"u"} else {"c"}, n=if n<0 {!n} else {n})).collect::<String>();
-    let fns=iter.clone().map(|(n,name, cntr)|format!(r#"        fn {name}_{n}({parameters})->Owned<()>;
-"#, parameters = (0..cntr).map(|x|format!("arg{x}: Sexp<()>")).collect::<Vec<_>>().as_slice().join(", "), n=if n<0 {!n} else {n})).collect::<String>();
-    let s=format!(r#"mod {mod_name} {{{camel}
+    let fns = iter
+        .clone()
+        .map(|(n, name, cntr)| {
+            format!(
+                r#"        fn {name}_{n}({parameters})->Owned<()>;
+"#,
+                parameters = (0..cntr)
+                    .map(|x| format!("arg{x}: Sexp<()>"))
+                    .collect::<Vec<_>>()
+                    .as_slice()
+                    .join(", "),
+                n = if n < 0 { !n } else { n }
+            )
+        })
+        .collect::<String>();
+    let s = format!(
+        r#"mod {mod_name} {{{camel}
     use ::rmin::{{Sexp, Owned, reg::*}};
     use ::core::ptr::null;
     extern "C" {{
@@ -204,22 +262,33 @@ fn finalize(crate_name:String) -> TokenStream {
             R_forceSymbols(info, 0); // change this to 1 will make most of the functions unsearchable, which is sad for people who want to compile in Rust and load in R directly.
         }}
     }}
-}}"#,name=crate_name,saves=dlls, funcs=fns, mod_name="_please_do_not_use_rmin_export_interface_as_your_mod_name_", camel = if cfg!(feature = "camel-ass") {"\n"} else {""});
-
-
+}}"#,
+        name = crate_name,
+        saves = dlls,
+        funcs = fns,
+        mod_name = "_please_do_not_use_rmin_export_interface_as_your_mod_name_",
+        camel = if cfg!(feature = "camel-ass") {
+            "\n"
+        } else {
+            ""
+        }
+    );
 
     #[cfg(feature = "verbose-output")]
     println!("finalizer generates:\n{s}");
 
     #[cfg(feature = "write-r-func-to-out-dir")]
-    if let Ok(dir)=std::env::var("CARGO_MANIFEST_DIR"){
+    if let Ok(dir) = std::env::var("CARGO_MANIFEST_DIR") {
         #[cfg(feature = "verbose-output")]
         println!("Writting R wrappers to {dir}");
-        use std::path::Path;
         use std::fs;
+        use std::path::Path;
         let path = Path::new(&dir);
         if path.is_dir() {
-            fs::write(path.join(R_SCRIPT_NAME), format!(r#"# nolint start
+            fs::write(
+                path.join(R_SCRIPT_NAME),
+                format!(
+                    r#"# nolint start
 #' @name {crate_name}
 #' @docType package
 #' @usage NULL
@@ -229,22 +298,39 @@ fn finalize(crate_name:String) -> TokenStream {
 {all_fns}
 
 # nolint end
-"#, all_fns = data.iter().enumerate()
-    .map(|(n, meta)|format!(r#"{docs}
+"#,
+                    all_fns = data
+                        .iter()
+                        .enumerate()
+                        .map(|(n, meta)| format!(
+                            r#"{docs}
 #' @export
-{name} <- function({param}).Call(.c{n}{sep}{param})"#, docs = meta.doc(), name = meta.name(), param = meta.param(), sep = if meta.len()==0 {""} else {", "})).collect::<Vec<_>>().join("\n\n"))
-    ).unwrap_or_else(|_|println!("warning: failed to write R wrapper file `{R_SCRIPT_NAME}`"));
+{name} <- function({param}).Call(.c{n}{sep}{param})"#,
+                            docs = meta.doc(),
+                            name = meta.name(),
+                            param = meta.param(),
+                            sep = if meta.len() == 0 { "" } else { ", " }
+                        ))
+                        .collect::<Vec<_>>()
+                        .join("\n\n")
+                ),
+            )
+            .unwrap_or_else(|_| {
+                println!("warning: failed to write R wrapper file `{R_SCRIPT_NAME}`")
+            });
         } else {
             println!("Warning: environment variable $(R_SCRIPT_DIR) is set but the path `{dir}` is not a dir!")
         }
     } else {
-        println!("warning: $(CARGO_MANIFEST_DIR) does not have a value, thus abort writting R wrappers.")
+        println!(
+            "warning: $(CARGO_MANIFEST_DIR) does not have a value, thus abort writting R wrappers."
+        )
     }
     TokenStream::from_str(&s).expect("fatal error: internal errors with macro `done`, please disable the `done` macro, and file an issue about that.")
 }
 #[cfg(feature = "write-r-func-to-out-dir")]
 #[allow(non_snake_case)]
-fn print_env(){
+fn print_env() {
     let CARGO_MANIFEST_DIR = std::env::var("CARGO_MANIFEST_DIR");
     let CARGO_PKG_VERSION = std::env::var("CARGO_PKG_VERSION");
     let CARGO_PKG_VERSION_MAJOR = std::env::var("CARGO_PKG_VERSION_MAJOR");
@@ -258,7 +344,8 @@ fn print_env(){
     let CARGO_PKG_REPOSITORY = std::env::var("CARGO_PKG_REPOSITORY");
     let OUT_DIR = std::env::var("OUT_DIR");
 
-    println!(r#"vars:
+    println!(
+        r#"vars:
     CARGO_MANIFEST_DIR = {CARGO_MANIFEST_DIR:?}
     CARGO_PKG_VERSION = {CARGO_PKG_VERSION:?}
     CARGO_PKG_VERSION_MAJOR = {CARGO_PKG_VERSION_MAJOR:?}
@@ -270,5 +357,6 @@ fn print_env(){
     CARGO_PKG_DESCRIPTION = {CARGO_PKG_DESCRIPTION:?}
     CARGO_PKG_HOMEPAGE = {CARGO_PKG_HOMEPAGE:?}
     CARGO_PKG_REPOSITORY = {CARGO_PKG_REPOSITORY:?}
-    OUT_DIR = {OUT_DIR:?}"#)
+    OUT_DIR = {OUT_DIR:?}"#
+    )
 }
