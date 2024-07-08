@@ -7,7 +7,7 @@ use r_type::{
     alias::*,
     error,
     lib_r::{
-        R_ClassSymbol, R_ExternalPtrAddr, R_MakeExternalPtr, R_NilValue, R_RegisterCFinalizer, Rf_setAttrib
+        R_ClassSymbol, R_MakeExternalPtr, R_NilValue, Rf_setAttrib
     },
     RDefault, RType, RTypeFrom, RTypeMut, SEXPext, SEXP, SEXPTYPE,
 };
@@ -15,10 +15,7 @@ use r_type::{
 #[cfg(doc)]
 use r_type::define::*;
 #[cfg(not(have_std))]
-use {
-    crate::Box,
-    r_type::print,
-}; // for doc;
+use r_type::print; // for doc;
 /// impl Index and IndexMut for a type.
 pub mod macros {
     /// internal impl.
@@ -78,66 +75,89 @@ impl<T: RType> Owned<T> {
         self.into()
     }
 }
-
-/// a trait for handling S4 objects.
-/// This trait will convert Rust objects into S4 objects with registering its finalizer.
-pub trait S4: Sized + 'static {
+/// Convient trait that generate a null external ptr.
+/// It is called R5, but still needs a lot of treatment from being real R5 class
+pub trait R5: Sized + 'static {
     // /// The class R will used (if it is not empty)
     // const R_CLASS: &'static str = "";
-    /// The class name S4 method will use.
+    /// The class name R5 method will use.
     #[cfg(feature = "const_type_name")]
     const CLASS_NAME: &'static str = core::any::type_name::<Self>();
-    /// The class name S4 method will use.
+    /// The class name R5 method will use.
     #[cfg(not(feature = "const_type_name"))]
     const CLASS_NAME: &'static str;
-    /// boxing self and converting it into externalptr
-    fn boxed_to_sexp(self) -> Owned<externalptr> {
-        Box::new(self).into_sexp()
-    }
-    /// convert boxed self into externalptr
-    fn into_sexp(self: Box<Self>) -> Owned<externalptr> {
+    
+    /// Create empty ExternalPtr
+    fn new() -> Owned<externalptr> {
         #[cfg(feature = "create_new_class_symbol")]
         #[allow(non_snake_case)]
         let R_ClassSymbol = unsafe {
             Owned::raw_from_str("class")
                 .protect()
-                .as_sexp(Owned::raw_from_str(<Self as S4>::CLASS_NAME).protect())
+                .as_sexp(Owned::raw_from_str(<Self as R5>::CLASS_NAME).protect())
         };
-        let name = Owned::raw_from_str(<Self as S4>::CLASS_NAME).protect();
-        // let name = if <Self as S4>::R_CLASS == "" {
-        // } else {
-        //     Protected::<character>::raw_from_strs([<Self as S4>::R_CLASS, <Self as S4>::CLASS_NAME].iter())
-        // };
+        let name = Owned::raw_from_str(<Self as R5>::CLASS_NAME).protect();
         let ret = Owned::<externalptr> {
             sexp: unsafe {
-                R_MakeExternalPtr(Box::into_raw(self) as *mut c_void, R_NilValue, R_NilValue)
+                R_MakeExternalPtr(core::ptr::null_mut() as *mut c_void, R_NilValue, R_NilValue)
             },
             _marker: [],
-        }
-        .protect();
-        unsafe { R_RegisterCFinalizer(ret.sexp, <Self as S4>::fin) }
+        }.protect();
         unsafe { Rf_setAttrib(ret.sexp, R_ClassSymbol, name.sexp) };
         ret.into()
     }
-    /// Finalizer, might not be called.
-    extern "C" fn fin(item: SEXP) {
-        #[cfg(feature = "create_new_class_symbol")]
-        #[allow(non_snake_case)]
-        let R_ClassSymbol = unsafe { Owned::raw_from_str("class").protect().as_sexp() };
-        // let class : Owned<Rchar> = unsafe {Owned{sexp:item.get_attr(R_ClassSymbol),_marker:[]}};
-
-        // if class.len() == 0 {
-        //     panic!("Expect class {CLASS_NAME}, but an object with no class specific is sent to the finalizer!", CLASS_NAME = <Self as S4>::CLASS_NAME);
-        // } else if class[0] != <Self as S4>::CLASS_NAME {
-        //     panic!("Expect class {CLASS_NAME}, but class[0] = {} is sent to the finalizer!", class[0], CLASS_NAME = <Self as S4>::CLASS_NAME)
-        // } else {
-        //     // SAFETY: the pointer is created from Rust and not dropped (since into_sexp requires it directly)
-        //     // Thus dereference it is safe.
-        //     let item =  unsafe {*{R_ExternalPtrAddr(item) as *mut Self}}; // then safely drops it.
-        // }
-        drop(unsafe { Box::from_raw(R_ExternalPtrAddr(item) as *mut Self) })
-    }
 }
+
+// /// a trait for handling R5 objects.
+// /// This trait will convert Rust objects into R5 objects with registering its finalizer.
+// pub trait ClassObject: R5 {
+//     /// boxing self and converting it into externalptr
+//     fn boxed_to_sexp(self) -> Owned<externalptr> {
+//         Box::new(self).into_sexp()
+//     }
+//     /// convert boxed self into externalptr
+//     fn into_sexp(self: Box<Self>) -> Owned<externalptr> {
+//         #[cfg(feature = "create_new_class_symbol")]
+//         #[allow(non_snake_case)]
+//         let R_ClassSymbol = unsafe {
+//             Owned::raw_from_str("class")
+//                 .protect()
+//                 .as_sexp(Owned::raw_from_str(<Self as R5>::CLASS_NAME).protect())
+//         };
+//         let name = Owned::raw_from_str(<Self as R5>::CLASS_NAME).protect();
+//         let ret = Owned::<externalptr> {
+//             sexp: unsafe {
+//                 R_MakeExternalPtr(Box::into_raw(self) as *mut c_void, R_NilValue, R_NilValue)
+//             },
+//             _marker: [],
+//         }
+//         .protect();
+//         unsafe { R_RegisterCFinalizer(ret.sexp, <Self as ClassObject>::fin) }
+//         unsafe { Rf_setAttrib(ret.sexp, R_ClassSymbol, name.sexp) };
+//         ret.into()
+//     }
+//     /// Finalizer, might not be called.
+//     extern "C" fn fin(item: SEXP) {
+//         #[cfg(feature = "create_new_class_symbol")]
+//         #[allow(non_snake_case)]
+//         let R_ClassSymbol = unsafe { Owned::raw_from_str("class").protect().as_sexp() };
+//         let class : Owned<character> = unsafe {Owned{sexp:item.get_attr(R_ClassSymbol),_marker:[]}};
+
+//         if class.len() == 0 {
+//             panic!("Expect class {CLASS_NAME}, but an object with no class specific is sent to the finalizer!", CLASS_NAME = <Self as R5>::CLASS_NAME);
+//         } else if let Ok(cls) = core::str::from_utf8(class[0].data()) {
+//             if cls != <Self as R5>::CLASS_NAME {
+//                 panic!("Expect class {CLASS_NAME}, but class[0] = {cls} is sent to the finalizer!", CLASS_NAME = <Self as R5>::CLASS_NAME)
+//             } else {
+//                 // SAFETY: the pointer is created from Rust and not dropped (since into_sexp requires it directly)
+//                 // Thus dereference it is safe.
+//                 drop(unsafe { Box::from_raw(R_ExternalPtrAddr(item) as *mut Self) }) // then safely drops it.
+//             }
+//         } else {
+//             panic!("Expect class {CLASS_NAME}, but class[0] cannot convert to valid utf8 str", CLASS_NAME = <Self as R5>::CLASS_NAME)
+//         }
+//     }
+// }
 
 /// Protected [`SEXP`], should not be transferred across FFI boundary.
 ///

@@ -1,10 +1,11 @@
+[workspace]
 [lib]
 crate-type = ["cdylib"]
 
 [package]
 name = "rmin-example-latex-table"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-rmin = { version = "0.5.0-pre", path = "../rmin", default-features = false, features = ["panic-info-message", "std"] }
+rmin = { version = "0.5.0-pre", path = "../rmin", default-features = false, features = ["busybox", "panic-info-message", "rmin-macros-verbose", "rmin-macros-warning", "std"] }

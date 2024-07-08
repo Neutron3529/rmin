@@ -32,7 +32,7 @@ pub fn fine2()->Owned<character> {
 }
 
 struct S4;
-impl rmin::S4 for S4 {}
+impl R5 for S4 {}
 impl Drop for S4 {
     fn drop(&mut self){
         println!("S4 dropped")
@@ -40,16 +40,9 @@ impl Drop for S4 {
 }
 
 #[export]
-pub fn s4_class()->Owned<character>{
-    Owned::raw_from_str(<S4 as rmin::S4>::CLASS_NAME)
+pub fn s4()->Owned<externalptr>{
+    S4::new()
 }
-
-#[export]
-pub fn s4()->Owned<*mut core::ffi::c_void>{
-    <S4 as rmin::S4>::boxed_to_sexp(S4)
-}
-
-
 
 /**add
 

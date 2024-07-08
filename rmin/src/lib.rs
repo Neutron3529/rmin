@@ -255,7 +255,7 @@ pub mod prelude {
     #[doc(inline)]
     pub use crate::base::{
         handle_panic,
-        s::{Owned, SExt, Sexp, S4},
+        s::{Owned, Sexp, SExt, R5},
     };
 
     #[doc(inline)]
