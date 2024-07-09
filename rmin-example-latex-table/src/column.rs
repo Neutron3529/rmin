@@ -1,59 +1,59 @@
 use crate::{fmt, Data, Display};
 #[derive(Default)]
-pub struct Rows {
-    pub rows: Vec<Row>,
+pub struct Columns {
+    pub columns: Vec<Column>,
     pub names: Vec<String>,
     pub verts: Vec<usize>,
 }
-impl Rows {
-    pub fn header(s: &str) -> Rows {
-        let mut rows = Vec::new();
+impl Columns {
+    pub fn header(s: &str) -> Columns {
+        let mut columns = Vec::new();
         let mut verts = Vec::new();
         for item in s.chars() {
             match item {
-                '|' => verts.push(rows.len()),
-                'l' => rows.push(Row::new_align(RowAlign::Left)),
-                'r' => rows.push(Row::new_align(RowAlign::Right)),
+                '|' => verts.push(columns.len()),
+                'l' => columns.push(Column::new_align(ColumnAlign::Left)),
+                'r' => columns.push(Column::new_align(ColumnAlign::Right)),
                 '%' => {
-                    rows.last_mut().map(|x| x.ifn.as_percentage = true);
+                    columns.last_mut().map(|x| x.ifn.as_percentage = true);
                 }
                 ch @ '0'..='9' => {
-                    rows.last_mut()
+                    columns.last_mut()
                         .map(|x| x.ifn.rounding = x.ifn.rounding * 10 + (ch as u8 - b'0') as u32);
                 }
-                _ => rows.push(Row::new_align(RowAlign::Center)), /*any other characters regarded as 'c'*/
+                _ => columns.push(Column::new_align(ColumnAlign::Center)), /*any other characters regarded as 'c'*/
             }
         }
-        let names = vec![String::new(); rows.len()];
-        Self { rows, names, verts }
+        let names = vec![String::new(); columns.len()];
+        Self { columns, names, verts }
     }
     pub fn set_names(&mut self, names: impl Into<Vec<String>>) {
         self.names = names.into()
     }
     pub fn set_roundings(&mut self, rounding: impl Into<u32>) {
         let rounding = rounding.into();
-        for i in &mut self.rows {
+        for i in &mut self.columns {
             i.ifn.rounding = rounding;
         }
     }
-    pub fn set_align(&mut self, index: impl Into<usize>, align: impl Into<RowAlign>) {
-        self.rows[index.into()].align = align.into()
+    pub fn set_align(&mut self, index: impl Into<usize>, align: impl Into<ColumnAlign>) {
+        self.columns[index.into()].align = align.into()
     }
     pub fn set_rounding(&mut self, index: impl Into<usize>, rounding: impl Into<u32>) {
-        self.rows[index.into()].ifn.rounding = rounding.into()
+        self.columns[index.into()].ifn.rounding = rounding.into()
     }
     pub fn set_as_percentage(&mut self, index: impl Into<usize>, as_percentage: impl Into<bool>) {
-        self.rows[index.into()].ifn.as_percentage = as_percentage.into()
+        self.columns[index.into()].ifn.as_percentage = as_percentage.into()
     }
     pub fn set_name(&mut self, index: impl Into<usize>, name: impl Into<String>) {
         self.names[index.into()] = name.into()
     }
 }
 
-impl Display for Rows {
+impl Display for Columns {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut verts = 0;
-        for (n, i) in self.rows.iter().enumerate() {
+        for (n, i) in self.columns.iter().enumerate() {
             while let Some(t) = self.verts.get(verts).copied() {
                 if t <= n {
                     verts += 1;
@@ -71,41 +71,41 @@ impl Display for Rows {
     }
 }
 
-/// Row, for both colname and data row.
+/// Column, for both colname and data column.
 #[derive(Default)]
-pub struct Row {
+pub struct Column {
     /// content align
-    pub align: RowAlign,
-    /// available for data row only.
+    pub align: ColumnAlign,
+    /// available for data column only.
     pub ifn: ItemFn,
 }
 
-impl Row {
+impl Column {
     pub fn new() -> Self {
         Default::default()
     }
-    pub fn new_align(align: RowAlign) -> Self {
+    pub fn new_align(align: ColumnAlign) -> Self {
         Self {
             align: align,
             ..Default::default()
         }
     }
 }
-impl Display for Row {
+impl Display for Column {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",
             match self.align {
-                RowAlign::Left => "l",
-                RowAlign::Center => "c",
-                RowAlign::Right => "r",
+                ColumnAlign::Left => "l",
+                ColumnAlign::Center => "c",
+                ColumnAlign::Right => "r",
             }
         )
     }
 }
 #[derive(Default)]
-pub enum RowAlign {
+pub enum ColumnAlign {
     Left,
     #[default]
     Center,

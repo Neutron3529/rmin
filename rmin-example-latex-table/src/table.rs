@@ -104,14 +104,15 @@ impl Display for Table {
             f,
             r#"\begin{{table}}{caption}{table_rules}
     \begin{{tabular}}{{{format}}}{top_rules}{content}{bottom_rules}
-    \end{{tabular}}
+    \end{{tabular}}{footnotes}
 \end{{table}}"#,
             caption = Rules::<1, [&Caption; 1], &Caption>::new([&self.caption]),
             table_rules = self.table_rules,
             format = self.content.format(),
             content = self.content,
             top_rules = self.top_rules,
-            bottom_rules = self.bottom_rules
+            bottom_rules = self.bottom_rules,
+            footnotes = self.footnotes
         )
     }
 }
@@ -124,7 +125,7 @@ where
     for<'a> &'a T: IntoIterator<Item = &'a V>,
     for<'a> &'a V: Display,
 {
-    fn new(t: T) -> Self {
+    pub fn new(t: T) -> Self {
         Self(t, PhantomData)
     }
 }

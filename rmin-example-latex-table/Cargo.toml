@@ -3,9 +3,9 @@
 crate-type = ["cdylib"]
 
 [package]
-name = "rmin-example-latex-table"
+name = "lt"
 version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-rmin = { version = "0.5.0-pre", path = "../rmin", default-features = false, features = ["busybox", "panic-info-message", "rmin-macros-verbose", "rmin-macros-warning", "std"] }
+rmin = { version = "0.4.1-pre", path = "../rmin", default-features = false, features = ["busybox", "panic-info-message", "rmin-macros-verbose", "rmin-macros-warning", "rmin-macros-write-r-func-to-out-dir", "std"] }

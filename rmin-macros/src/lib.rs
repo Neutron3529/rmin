@@ -12,6 +12,7 @@ struct Flag(
 #[derive(Clone)]
 struct Meta {
     params: Vec<[String; 2]>,
+    public: bool
 }
 impl Meta {
     fn fname(&self) -> &str {
@@ -303,13 +304,13 @@ fn finalize(crate_name: String) -> TokenStream {
                         .iter()
                         .enumerate()
                         .map(|(n, meta)| format!(
-                            r#"{docs}
-#' @export
+                            r#"{docs}{export}
 {name} <- function({param}).Call(.c{n}{sep}{param})"#,
                             docs = meta.doc(),
-                            name = meta.name(),
+                            name = if meta.name().starts_with("_") {format!("`{}`", meta.name())} else {meta.name().to_string()},
                             param = meta.param(),
-                            sep = if meta.len() == 0 { "" } else { ", " }
+                            sep = if meta.len() == 0 { "" } else { ", " },
+                            export = if meta.public { "\n#' @export" } else { "" }
                         ))
                         .collect::<Vec<_>>()
                         .join("\n\n")

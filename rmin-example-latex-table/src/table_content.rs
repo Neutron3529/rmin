@@ -1,25 +1,25 @@
-use crate::{fmt, Data, Display, Rows};
+use crate::{fmt, Data, Display, Columns};
 /// Table content
 ///     \begin{tabular} % defined in Table
 ///         \toprules % defined in Table
-///             % col_name[0] .. col_name[last]    template_rows[0] .. template_rows[last]
+///             % col_name[0] .. col_name[last]    template_columns[0] .. template_columns[last]
 ///             meta                            &
 ///         \bottomrules % defined in Table
 ///     \end{tabular} % defined in Table
 #[derive(Default)]
 pub struct TableContent {
     /// real data
-    pub data: Vec<f64>,
+    pub data: Vec<Data<f64>>,
     // /// real data: data cols
     // pub data_cols:usize,
     /// col template
-    pub data_rows: Rows,
+    pub data_columns: Columns,
     /// col names, `self.cols()` equals to `self.col_name.len()`.
     pub col_name: Vec<String>,
-    /// store meta informations by row-first storage.
+    /// store meta informations by column-first storage.
     pub meta: Option<String>,
-    /// row names
-    pub template_rows: Rows,
+    /// column names
+    pub template_columns: Columns,
     /// extra hline
     pub hline: Vec<usize>,
     /// extra cline
@@ -30,14 +30,14 @@ impl TableContent {
         Default::default()
     }
     pub fn format(&self) -> String {
-        format!("{}{}", self.template_rows, self.data_rows)
+        format!("{}{}", self.template_columns, self.data_columns)
     }
     pub fn set_data<T: Into<Vec<f64>> + Sized, U: Into<Vec<String>> + Sized>(
         &mut self,
         data: T,
         col_name: U,
     ) {
-        self.data = data.into();
+        self.data = Data::from(&data.into());
         self.col_name = col_name.into();
     }
     pub fn cols(&self) -> usize {
@@ -47,10 +47,10 @@ impl TableContent {
 impl Display for TableContent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut iter = self
-            .template_rows
+            .template_columns
             .names
             .iter()
-            .chain(self.data_rows.names.iter());
+            .chain(self.data_columns.names.iter());
         if let Some(item) = iter.next_back() {
             write!(f, "\n        ")?;
             for item in iter {
@@ -59,18 +59,18 @@ impl Display for TableContent {
             write!(f, r"{item}\\")?
         }
         let col_len = self.col_name.len();
-        let row_len = self.data_rows.names.len();
-        if col_len * row_len != self.data.len() {
+        let column_len = self.data_columns.names.len();
+        if col_len * column_len != self.data.len() {
             write!(
                 f,
-                "%<Error: template accept {col_len} x {row_len} matrix, but only {} provided>",
+                "%<Error: template accept {col_len} x {column_len} matrix, but only {} provided>",
                 self.data.len()
             )?;
         } else {
-            let mut data = Data::from(&self.data);
+            let mut data = self.data.clone();
 
-            for j in 0..row_len {
-                let r = &self.data_rows.rows[j];
+            for j in 0..column_len {
+                let r = &self.data_columns.columns[j];
                 for i in 0..col_len {
                     data[j * col_len + i].rounding = r.ifn.rounding;
                     data[j * col_len + i].as_percentage = r.ifn.as_percentage;
@@ -78,10 +78,26 @@ impl Display for TableContent {
             }
 
             for i in 0..col_len {
-                write!(f, "\n        {} & ", self.col_name[i])?;
-                for j in 0..row_len {
+                if self.template_columns.columns.len()>0 {
+                    if self.col_name[i].contains(r"\multicolumn") {
+                        write!(f, "\n        {} & ", self.col_name[i])?
+                    } else {
+                        let colname = format!("\n        {} ", self.col_name[i]);
+                        let less = colname.bytes().fold(self.template_columns.columns.len() as i32,|s,x|if x==b'&' {s-1} else {s});
+                        if less < 0 {
+                            panic!("more & is provided")
+                        } else if less == 0 {
+                            write!(f, "{colname}")?
+                        } else {
+                            write!(f, "{colname} {:&>width$} ","", width = less as usize)?
+                        }
+                    }
+                } else {
+                    write!(f, "\n        ")?
+                }
+                for j in 0..column_len {
                     write!(f, "{}", data[i + j * col_len])?;
-                    if j != row_len - 1 {
+                    if j != column_len - 1 {
                         write!(f, " & ")?
                     } else {
                         write!(f, r"\\")?

@@ -8,12 +8,18 @@ pub fn get_meta(ret: &mut TokenStream, iter: &mut impl Iterator<Item = TokenTree
     let meta = String::new();
     #[cfg(feature = "write-r-func-to-out-dir")]
     let mut prev_is_sharp = false;
+    #[cfg(feature = "write-r-func-to-out-dir")]
+    let mut public = false;
     while let Some(x) = iter.next() {
         add(ret, &x);
         // println!("x = {x:?}");
         if let Ident(_) = x {
             if x.to_string() == "fn" {
-                break;
+                break
+            }
+            #[cfg(feature = "write-r-func-to-out-dir")]
+            if x.to_string() == "pub" {
+                public = true
             }
         } else {
             #[cfg(feature = "write-r-func-to-out-dir")]
@@ -26,6 +32,7 @@ pub fn get_meta(ret: &mut TokenStream, iter: &mut impl Iterator<Item = TokenTree
         add(ret, &name);
         Meta {
             params: vec![[fname, meta]],
+            public
         }
     } else {
         panic!("need a name after fn");

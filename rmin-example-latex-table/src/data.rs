@@ -1,6 +1,6 @@
 /// Printable data with flags.
 use crate::{fmt, Display};
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct Data<T: Display + Default> {
     pub data: T,
     pub rounding: u32,
