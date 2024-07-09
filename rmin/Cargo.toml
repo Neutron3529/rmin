@@ -29,4 +29,4 @@ rmin-macros-write-r-func-to-out-dir = ["rmin-macros", "rmin-macros/write-r-func-
 
 [dependencies]
 rmin-eh = { version = "0.0.1", path = "../rmin-eh", optional = true }
-rmin-macros = { version = "0.0.5", path = "../rmin-macros", optional = true }
+rmin-macros = { version = "0.0.6", path = "../rmin-macros", optional = true }
