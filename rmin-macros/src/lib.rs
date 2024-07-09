@@ -12,6 +12,7 @@ struct Flag(
 #[derive(Clone)]
 struct Meta {
     params: Vec<[String; 2]>,
+    #[cfg(feature = "write-r-func-to-out-dir")]
     public: bool
 }
 impl Meta {

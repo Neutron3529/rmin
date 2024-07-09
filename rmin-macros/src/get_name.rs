@@ -32,6 +32,7 @@ pub fn get_meta(ret: &mut TokenStream, iter: &mut impl Iterator<Item = TokenTree
         add(ret, &name);
         Meta {
             params: vec![[fname, meta]],
+            #[cfg(feature = "write-r-func-to-out-dir")]
             public
         }
     } else {
