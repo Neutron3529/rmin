@@ -2,7 +2,7 @@ use crate::{fmt, Data, Display, Columns};
 /// Table content
 ///     \begin{tabular} % defined in Table
 ///         \toprules % defined in Table
-///             % col_name[0] .. col_name[last]    template_columns[0] .. template_columns[last]
+///             % row_name[0] .. row_name[last]    template_columns[0] .. template_columns[last]
 ///             meta                            &
 ///         \bottomrules % defined in Table
 ///     \end{tabular} % defined in Table
@@ -14,8 +14,8 @@ pub struct TableContent {
     // pub data_cols:usize,
     /// col template
     pub data_columns: Columns,
-    /// col names, `self.cols()` equals to `self.col_name.len()`.
-    pub col_name: Vec<String>,
+    /// col names, `self.cols()` equals to `self.row_name.len()`.
+    pub row_name: Vec<String>,
     /// store meta informations by column-first storage.
     pub meta: Option<String>,
     /// column names
@@ -35,13 +35,13 @@ impl TableContent {
     pub fn set_data<T: Into<Vec<f64>> + Sized, U: Into<Vec<String>> + Sized>(
         &mut self,
         data: T,
-        col_name: U,
+        row_name: U,
     ) {
         self.data = Data::from(&data.into());
-        self.col_name = col_name.into();
+        self.row_name = row_name.into();
     }
     pub fn cols(&self) -> usize {
-        self.col_name.len()
+        self.row_name.len()
     }
 }
 impl Display for TableContent {
@@ -58,7 +58,7 @@ impl Display for TableContent {
             }
             write!(f, r"{item}\\")?
         }
-        let col_len = self.col_name.len();
+        let col_len = self.row_name.len();
         let column_len = self.data_columns.names.len();
         if col_len * column_len != self.data.len() {
             write!(
@@ -76,13 +76,28 @@ impl Display for TableContent {
                     data[j * col_len + i].as_percentage = r.ifn.as_percentage;
                 }
             }
-
+            let mut hidx = self.hline.iter().copied();
+            let mut cidx = self.cline.iter().copied();
+            let mut chidx = hidx.next();
+            let mut ccidx = cidx.next();
             for i in 0..col_len {
+                while let Some(x) = chidx {
+                    if x<=i {                
+                        write!(f, "\n        \\hline")?;
+                        chidx = hidx.next();
+                    } else {break}
+                }
+                while let Some((x,start,end)) =ccidx {
+                    if x<=i {
+                        write!(f, "\n        \\cline{{{start}-{end}}}")?;
+                        ccidx = cidx.next();
+                    } else {break}
+                }
                 if self.template_columns.columns.len()>0 {
-                    if self.col_name[i].contains(r"\multicolumn") {
-                        write!(f, "\n        {} & ", self.col_name[i])?
+                    if self.row_name[i].contains(r"\multicolumn") {
+                        write!(f, "\n        {} & ", self.row_name[i])?
                     } else {
-                        let colname = format!("\n        {} ", self.col_name[i]);
+                        let colname = format!("\n        {} ", self.row_name[i]);
                         let less = colname.bytes().fold(self.template_columns.columns.len() as i32,|s,x|if x==b'&' {s-1} else {s});
                         if less < 0 {
                             panic!("more & is provided")
@@ -103,6 +118,18 @@ impl Display for TableContent {
                         write!(f, r"\\")?
                     }
                 }
+            }
+            while let Some((x,start,end)) =ccidx {
+                if x<=col_len {
+                    write!(f, "\n        \\cline{{{start}-{end}}}")?;
+                    ccidx = cidx.next();
+                } else {break}
+            }
+            while let Some(x) = chidx {
+                if x<=col_len {                
+                    write!(f, "\n        \\hline")?;
+                    chidx = hidx.next();
+                } else {break}
             }
         }
         Ok(())

@@ -28,10 +28,35 @@
 #' #         \bottom_rules
 #' #     \end{tabular}
 #' # \end{table}
-#' @export
+#' @export LatexTableTemplate
+#' @exportClass LatexTableTemplate
 LatexTableTemplate <- setRefClass("LatexTableTemplate", fields = list(caption = "character", columns = "character", column_names = "character", roundings="integer", table_rules="character", top_rules="character", bottom_rules="character", footnotes="character", bold_fn = "function", italic_fn = "function", stars_fn = "function"), methods = list(
-    data = function(data, cap = character(0), row_name=character(0)){
-        "display the latex format with the given data, use caption \\code{cap} and row_name \\code{row_name} if provided."
+    data = function(data, cap = character(0), hline=0L, cline = integer(0), row_name=character(0), columns=character(0), column_names=character(0), roundings = 4, table_rules = character(0), top_rules=character(0), bottom_rules = character(0), footnotes = character(0)){
+        "display the latex format with the given data, use caption \\code{cap} and row_name \\code{row_name} if provided.\n \\code{hline} controls the location that \\\\hline command inserted in\n \\code{cline} has length 3*N, and cline[3*K+(1:3)] = c(a,b,c) where \\\\cline{b-c} will be inserted after a-th row is printed."
+        if (missing(cap)) {
+            cap=caption
+        }
+        if (missing(columns)) {
+            columns = .self$columns
+        }
+        if (missing(column_names)) {
+            column_names = .self$column_names
+        }
+        if (missing(roundings)) {
+            roundings = .self$roundings
+        }
+        if (missing(table_rules)) {
+            table_rules = .self$table_rules
+        }
+        if (missing(top_rules)) {
+            top_rules = .self$top_rules
+        }
+        if (missing(bottom_rules)) {
+            bottom_rules = .self$bottom_rules
+        }
+        if (missing(footnotes)) {
+            footnotes = .self$footnotes
+        }
         if (!is.matrix(data)) {stop("provided data should be matrix")}
         if (length(row_name) != dim(data)[1]) {
             row_name = rownames(data)
@@ -40,23 +65,29 @@ LatexTableTemplate <- setRefClass("LatexTableTemplate", fields = list(caption = 
             }
         }
         if (length(column_names) == 0) {
-            real_column_names = colnames(data)
-            if (length(real_column_names) == 0) {
-                real_column_names = character(dim(data)[2])
+            column_names = colnames(data)
+            if (length(column_names) == 0) {
+                column_names = character(dim(data)[2])
             }
-        } else {
-            real_column_names = column_names
         }
-        if (length(real_column_names) != dim(data)[2]) {
-            stop("`dim(data)` does not met `length(column_names)`")
-        }
-        if (length(cap) == 0) {
-            cap=caption
-        }
-        invisible(`_print`(as.double(data), as.character(row_name), as.logical(bold_fn(data)), as.logical(italic_fn(data)),as.integer(stars_fn(data)), cap, columns, real_column_names, roundings, table_rules, top_rules, bottom_rules, footnotes))
+        invisible(`_print`(as.double(data), as.character(row_name), as.integer(hline), as.integer(cline), as.logical(bold_fn(data)), as.logical(italic_fn(data)),as.integer(stars_fn(data)), as.character(cap), as.character(columns), as.character(column_names), as.integer(roundings), as.character(table_rules), as.character(top_rules), as.character(bottom_rules), as.character(footnotes)))
     },
     show = function(){
         data(t(rep(0,length(column_names))),row_name = "template:")
     }
 ))
 
+#' rt
+#' @description minimal R template
+#' @details
+#' Since it has the same name of \code{stats::rt}, this function is not exported,
+#' use \code{lt:::rt} could be fine.
+#' @param col_fmt control the column format of data
+#' @param name_col control the format of normal columns
+#' @return a \code{LatexTableTemplate} object
+#' @examples
+#' template <- lt:::rt("ccc%")
+#' template$data(matrix(1,2,3))
+rt <- function(col_fmt, name_col="l|") {
+    LatexTableTemplate(caption=character(0), columns = c(name_col, col_fmt), column_names = character(0), roundings=4L, table_rules = character(0), top_rules="\\toprules", bottom_rules = "\\bottom_rules", footnotes = character(0), bold_fn=function(x)NULL, italic_fn=function(x)NULL, stars_fn=function(x)NULL)
+}

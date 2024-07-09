@@ -26,7 +26,9 @@ use std::str;
 #[export]
 fn _print(
     data:Sexp<f64>, // data
-    col_name:Sexp<character>, // data name
+    row_name:Sexp<character>, // data name
+    hline:Sexp<integer>, // hline
+    cline:Sexp<integer>, // cline
     bold:Sexp<logical>, // whether the data should be bolded
     italic:Sexp<logical>, // whether the data should be italic
     stars:Sexp<integer>, // how much stars the data should have
@@ -77,14 +79,18 @@ fn _print(
     modify(&mut a,italic.data().iter(), |(data,&item)|data.as_italic = item == 1);
     modify(&mut a,stars.data().iter(), |(data,&item)|data.stars = item as u32);
     
-    a.content.col_name = col_name.data().iter().map(|x|String::from_utf8_lossy(x.data()).to_string()).collect();
+    a.content.hline = hline.data().iter().map(|&x|x as usize).collect();
+    a.content.cline = cline.data().chunks(3).map(|x|(x[0] as usize,x[1] as usize,x[2] as usize)).collect();
+    a.content.hline.sort_unstable();
+    a.content.cline.sort_unstable();
+    a.content.row_name = row_name.data().iter().map(|x|String::from_utf8_lossy(x.data()).to_string()).collect();
     
     a.table_rules = Rules::new(table_rules.data().iter().map(|x|String::from_utf8_lossy(x.data()).to_string()).collect());
     a.top_rules = Rules::new(top_rules.data().iter().map(|x|String::from_utf8_lossy(x.data()).to_string()).collect());
     a.bottom_rules = Rules::new(bottom_rules.data().iter().map(|x|String::from_utf8_lossy(x.data()).to_string()).collect());
     a.footnotes = Rules::new(footnotes.data().iter().map(|x|String::from_utf8_lossy(x.data()).to_string()).collect());
     
-    let out = a.to_string();
+    let out = a.to_string().replace('%',r"\%");
     println!("{out}");
     Owned::raw_from_str(out.as_bytes())
 }
@@ -113,7 +119,7 @@ mod test {
         ]);
         a.content.data = Data::from(&vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]);
         a.content.data_columns.set_roundings(4u32);
-        a.content.col_name = vec!["& test".to_string()];
+        a.content.row_name = vec!["& test".to_string()];
         println!("{a}")
     }
 }

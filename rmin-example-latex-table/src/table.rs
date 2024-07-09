@@ -106,7 +106,7 @@ impl Display for Table {
     \begin{{tabular}}{{{format}}}{top_rules}{content}{bottom_rules}
     \end{{tabular}}{footnotes}
 \end{{table}}"#,
-            caption = Rules::<1, [&Caption; 1], &Caption>::new([&self.caption]),
+            caption = Rules::<1, Vec<&Caption>, &Caption>::new(if self.caption.cap.as_ref().or(self.caption.label.as_ref()).is_some() {vec![&self.caption]} else {vec![]}),
             table_rules = self.table_rules,
             format = self.content.format(),
             content = self.content,
