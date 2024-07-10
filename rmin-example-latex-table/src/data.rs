@@ -23,7 +23,7 @@ impl Display for Data<f64> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "${ipre}{bpre}{item:0.rounding$}{bpo}{ipo}{percentage}${stars}",
+            "{ipre}{bpre}{item:0.rounding$}{bpo}{ipo}{percentage}{stars}",
             item = if self.as_percentage {
                 100. * self.data
             } else {
@@ -35,10 +35,10 @@ impl Display for Data<f64> {
                 self.rounding as usize
             },
             percentage = if self.as_percentage { "%" } else { "" },
-            ipre = if self.as_italic { r#"{\it{"# } else { "" },
-            bpre = if self.as_bold { r#"{\bold{"# } else { "" },
-            ipo = if self.as_italic { r#"}}"# } else { "" },
-            bpo = if self.as_bold { r#"}}"# } else { "" },
+            ipre = if self.as_italic { r#"\textit{"# } else { "" },
+            bpre = if self.as_bold { r#"\textbf{"# } else { "" },
+            ipo = if self.as_italic { r#"}"# } else { "" },
+            bpo = if self.as_bold { r#"}"# } else { "" },
             stars = if self.stars <= 0 {
                 String::new()
             } else if self.use_threeparttable {
