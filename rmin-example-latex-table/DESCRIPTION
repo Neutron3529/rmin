@@ -1,10 +1,10 @@
 Package: lt
-Title: A Small Example For Latex Table
+Title: Latex Table
 Version: 0.0.0.9000
 Author: 
     person("Feiyue", "Xie", , "qweytr1@mail.ustc.edu.cn", role = c("aut", "cre"))
 Maintainer: Feiyue Xie <qweytr1@mail.ustc.edu.cn>
-Description: What the package does (one paragraph).
+Description: This package provide a small template for latex table, using \code{lt:::rt} to generate the template object, and then use \code{$data(data_matrix, ...other parameter)} to obtain the formatted latex table.
 License: AGPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

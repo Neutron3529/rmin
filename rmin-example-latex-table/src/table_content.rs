@@ -1,4 +1,4 @@
-use crate::{fmt, Data, Display, Columns};
+use crate::{fmt, Columns, Data, Display};
 /// Table content
 ///     \begin{tabular} % defined in Table
 ///         \toprules % defined in Table
@@ -82,29 +82,36 @@ impl Display for TableContent {
             let mut ccidx = cidx.next();
             for i in 0..col_len {
                 while let Some(x) = chidx {
-                    if x<=i {                
+                    if x <= i {
                         write!(f, "\n        \\hline")?;
                         chidx = hidx.next();
-                    } else {break}
+                    } else {
+                        break;
+                    }
                 }
-                while let Some((x,start,end)) =ccidx {
-                    if x<=i {
+                while let Some((x, start, end)) = ccidx {
+                    if x <= i {
                         write!(f, "\n        \\cline{{{start}-{end}}}")?;
                         ccidx = cidx.next();
-                    } else {break}
+                    } else {
+                        break;
+                    }
                 }
-                if self.template_columns.columns.len()>0 {
+                if self.template_columns.columns.len() > 0 {
                     if self.row_name[i].contains(r"\multicolumn") {
                         write!(f, "\n        {} & ", self.row_name[i])?
                     } else {
                         let colname = format!("\n        {} ", self.row_name[i]);
-                        let less = colname.bytes().fold(self.template_columns.columns.len() as i32,|s,x|if x==b'&' {s-1} else {s});
+                        let less = colname.bytes().fold(
+                            self.template_columns.columns.len() as i32,
+                            |s, x| if x == b'&' { s - 1 } else { s },
+                        );
                         if less < 0 {
                             panic!("more & is provided")
                         } else if less == 0 {
                             write!(f, "{colname}")?
                         } else {
-                            write!(f, "{colname} {:&>width$} ","", width = less as usize)?
+                            write!(f, "{colname} {:&>width$} ", "", width = less as usize)?
                         }
                     }
                 } else {
@@ -119,17 +126,21 @@ impl Display for TableContent {
                     }
                 }
             }
-            while let Some((x,start,end)) =ccidx {
-                if x<=col_len {
+            while let Some((x, start, end)) = ccidx {
+                if x <= col_len {
                     write!(f, "\n        \\cline{{{start}-{end}}}")?;
                     ccidx = cidx.next();
-                } else {break}
+                } else {
+                    break;
+                }
             }
             while let Some(x) = chidx {
-                if x<=col_len {                
+                if x <= col_len {
                     write!(f, "\n        \\hline")?;
                     chidx = hidx.next();
-                } else {break}
+                } else {
+                    break;
+                }
             }
         }
         Ok(())

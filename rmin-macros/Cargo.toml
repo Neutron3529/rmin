@@ -3,7 +3,7 @@ proc-macro = true
 
 [package]
 name = "rmin-macros"
-version = "0.0.6"
+version = "0.0.7"
 edition = "2021"
 description = "A minimal Rust lib for writting R extensions"
 authors = ["Neutron3529 <qweytr1@main.ustc.edu.cn>"]

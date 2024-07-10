@@ -2,4 +2,4 @@
 ^target$
 ^.*\.so$
 ^.*\.dll$
-^\.cargo$
+^src/\.cargo$

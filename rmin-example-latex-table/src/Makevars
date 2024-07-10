@@ -15,14 +15,18 @@ $(STATLIB):
 	# therefore is only used if cargo is absent from the user's PATH.
 	if [ "$(NOT_CRAN)" != "true" ]; then \
 		export CARGO_HOME=$(CARGOTMP); \
+	else \
+		[ -d "../vendor" ] || cargo vendor ./../vendor ; \
 	fi && \
 		export PATH="$(PATH):$(HOME)/.cargo/bin" && \
 		cargo build --lib --release --manifest-path=$(TARGET_DIR)/../Cargo.toml --target-dir $(TARGET_DIR) && \
-		rm -f $(R_SCRIPT_DIR)/aaa.rmin.Rust.Functions.R && cp $(TARGET_DIR)/../aaa.rmin.Rust.Functions.R $(R_SCRIPT_DIR) && \
-		cp $(STATLIB) $(SHLIB)
+		rm -f $(R_SCRIPT_DIR)/aaa.rmin.Rust.Functions.R && mv $(TARGET_DIR)/../aaa.rmin.Rust.Functions.R $(R_SCRIPT_DIR) && \
+		cp $(STATLIB) $(SHLIB) && \
 	if [ "$(NOT_CRAN)" != "true" ]; then \
 		rm -Rf $(CARGOTMP) && \
 		rm -rf $(TARGET_DIR) ; \
+	else \
+		R -s -e "cat('try generating documents\n');try(roxygen2::roxygenize('..'));cat('documents generating done.\n')" ; \
 	fi
 
 C_clean:

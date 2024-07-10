@@ -50,6 +50,7 @@ impl Meta {
         self.params
             .iter()
             .skip(1)
+            .filter(|x|!x[1].starts_with("Option"))
             .map(|x| format!("{}.missing()", x[0]))
             .collect::<Vec<_>>()
             .join(delim)
@@ -58,6 +59,7 @@ impl Meta {
         self.params
             .iter()
             .skip(1)
+            .filter(|x|!x[1].starts_with("Option"))
             .map(|x| format!("  missing {}: {{}}", x[0]))
             .collect::<Vec<_>>()
             .join("\n")

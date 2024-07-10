@@ -7,6 +7,7 @@ pub struct Data<T: Display + Default> {
     pub as_percentage: bool,
     pub as_bold: bool,
     pub as_italic: bool,
+    pub use_threeparttable: bool,
     pub stars: u32,
 }
 impl Data<f64> {
@@ -22,8 +23,7 @@ impl Display for Data<f64> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{ipre}{bpre}{item:0.rounding$}{bpo}{ipo}{percentage}{placeholder:*>stars$}",
-            placeholder = "",
+            "${ipre}{bpre}{item:0.rounding$}{bpo}{ipo}{percentage}${stars}",
             item = if self.as_percentage {
                 100. * self.data
             } else {
@@ -35,11 +35,24 @@ impl Display for Data<f64> {
                 self.rounding as usize
             },
             percentage = if self.as_percentage { "%" } else { "" },
-            ipre = if self.as_italic { r#"\it{"# } else { "" },
-            bpre = if self.as_bold { r#"\bold{"# } else { "" },
-            ipo = if self.as_italic { r#"}"# } else { "" },
-            bpo = if self.as_bold { r#"}"# } else { "" },
-            stars = self.stars as usize
+            ipre = if self.as_italic { r#"{\it{"# } else { "" },
+            bpre = if self.as_bold { r#"{\bold{"# } else { "" },
+            ipo = if self.as_italic { r#"}}"# } else { "" },
+            bpo = if self.as_bold { r#"}}"# } else { "" },
+            stars = if self.stars <= 0 {
+                String::new()
+            } else if self.use_threeparttable {
+                format!(
+                    "\\tnote{{{stars}*}}",
+                    stars = r"{*\!}".repeat(self.stars as usize - 1)
+                )
+            } else {
+                format!(
+                    "$^{{{{\\hspace{{-0.1em}}}}^{{{stars}{back}}}}}$",
+                    back = r"\!".repeat(2 * self.stars as usize),
+                    stars = r"{*\!}".repeat(self.stars as usize),
+                )
+            }
         )
     }
 }

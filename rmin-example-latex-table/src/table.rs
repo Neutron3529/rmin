@@ -102,17 +102,30 @@ impl Display for Table {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            r#"\begin{{table}}{caption}{table_rules}
+            r#"\begin{{{table}}}{caption}{table_rules}
     \begin{{tabular}}{{{format}}}{top_rules}{content}{bottom_rules}
     \end{{tabular}}{footnotes}
-\end{{table}}"#,
-            caption = Rules::<1, Vec<&Caption>, &Caption>::new(if self.caption.cap.as_ref().or(self.caption.label.as_ref()).is_some() {vec![&self.caption]} else {vec![]}),
+\end{{{table}}}"#,
+            caption = Rules::<1, Vec<&Caption>, &Caption>::new(
+                if self
+                    .caption
+                    .cap
+                    .as_ref()
+                    .or(self.caption.label.as_ref())
+                    .is_some()
+                {
+                    vec![&self.caption]
+                } else {
+                    vec![]
+                }
+            ),
             table_rules = self.table_rules,
             format = self.content.format(),
             content = self.content,
             top_rules = self.top_rules,
             bottom_rules = self.bottom_rules,
-            footnotes = self.footnotes
+            footnotes = self.footnotes,
+            table = if let Some(true) = self.content.data.get(0).map(|x|x.use_threeparttable) {"threeparttable"} else {"table"}
         )
     }
 }

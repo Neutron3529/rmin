@@ -18,14 +18,19 @@ impl Columns {
                     columns.last_mut().map(|x| x.ifn.as_percentage = true);
                 }
                 ch @ '0'..='9' => {
-                    columns.last_mut()
+                    columns
+                        .last_mut()
                         .map(|x| x.ifn.rounding = x.ifn.rounding * 10 + (ch as u8 - b'0') as u32);
                 }
                 _ => columns.push(Column::new_align(ColumnAlign::Center)), /*any other characters regarded as 'c'*/
             }
         }
         let names = vec![String::new(); columns.len()];
-        Self { columns, names, verts }
+        Self {
+            columns,
+            names,
+            verts,
+        }
     }
     pub fn set_names(&mut self, names: impl Into<Vec<String>>) {
         self.names = names.into()

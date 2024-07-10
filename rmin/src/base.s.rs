@@ -54,6 +54,25 @@ pub struct Sexp<T: RType> {
     sexp: SEXP,
     _marker: [PhantomData<T>; 0],
 }
+
+/// ReadOnly [`SEXP`], which might be missing.
+///
+/// The only thing you could do is [`.into_option()`], which check the missingness and then convert it into a regular [`Sexp`] in case it is not missing.
+#[repr(transparent)]
+pub struct OptionSexp<T: RType> {
+    sexp: Sexp<T>
+}
+impl<T: RType> OptionSexp<T> {
+    /// Convert the `OptionSexp<T>` into `Option<Sexp<T>>` item.
+    #[inline(always)]
+    pub fn into_option(self)->Option<Sexp<T>> {
+        if self.sexp.missing() {
+            None
+        } else {
+            Some(self.sexp)
+        }
+    }
+}
 /// Owned [`SEXP`], allocated by Rust code.
 ///
 /// You could modify object as a slice object, and return it as a R vector.

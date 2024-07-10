@@ -51,7 +51,7 @@ pub struct DllInfo([u8; 0]);
 ///     Rchar:Sexp<Rchar>, // for R char type (not character type)
 /// ) -> Owned<NULL> {todo!()}
 /// ```
-pub type SEXP = *mut SEXPREC;
+pub type SEXP = core::ptr::NonNull<*mut SEXPREC>;
 #[doc = "NOT YET using enum:\n  1)\tThe internal SEXPREC struct has 'SEXPTYPE type : 5'\n\t(making FUNSXP and CLOSXP equivalent in there),\n\tgiving (-Wall only ?) warnings all over the place\n 2)\tMany switch(type) { case ... } statements need a final `default:'\n\tadded in order to avoid warnings like [e.g. l.170 of ../main/util.c]\n\t  \"enumeration value `FUNSXP' not handled in switch\""]
 pub type SEXPTYPE = c_uint;
 
