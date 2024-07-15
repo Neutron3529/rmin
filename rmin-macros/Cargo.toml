@@ -17,6 +17,7 @@ camel-ass = []
 warning-on-empty-sig = []
 verbose-output = []
 write-r-func-to-out-dir = []
+force-symbol = []
 
 [dependencies]
 

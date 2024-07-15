@@ -13,6 +13,12 @@ The recent usable version is v0.3.1, DO NOT USE THE GIT VERSION
 
 Please notice that, I am not familar with switching branches, the commit directly into the main branch is highly untrustable. Github is a repo only
 
+# Upcoming breaking changes in v0.4.3-pre0:
+
+- [x] Create an (unsafe) type [`OptionSexp`], since there is no guarateen makes `MISSING(a missing value)` in R returns non-zero (nor even returns, since the pointer may be invalid). Since with macro support, [`Sexp`] cannot missing,
+- [x] unify the two entry with lib*.so and *.so in the macro: create both.
+
+
 # Upcoming breaking changes in v0.4.0:
 
 [`character`] re-bind to [`Sexp<char>`], which has [`SEXPTYPE`] binds to [`STRSXP`](Rdef::STRSXP)
@@ -255,7 +261,7 @@ pub mod prelude {
     #[doc(inline)]
     pub use crate::base::{
         handle_panic,
-        s::{Owned, Sexp, SExt, R5},
+        s::{Owned, Sexp, OptionSexp, SExt, R5},
     };
 
     #[doc(inline)]

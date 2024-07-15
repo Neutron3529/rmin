@@ -1,6 +1,6 @@
 [package]
 name = "rmin"
-version = "0.4.2-pre0"
+version = "0.4.3-pre0"
 edition = "2021"
 description = "A minimal Rust lib for writting R extensions"
 authors = ["Neutron3529 <qweytr1@main.ustc.edu.cn>"]
@@ -10,7 +10,7 @@ repository = "https://github.com/Neutron3529/rmin"
 
 [features]
 default = ["core", "busybox", "rmin-macros-warning", "rmin-macros-write-r-func-to-out-dir", ]
-busybox = ["panic-info-message", "const_type_name"]
+busybox = ["panic-info-message", "const_type_name", "rmin-macros?/force-symbol"]
 const_type_name = []
 create_new_class_symbol = [] # For really old R that has no R_ClassSymbol
 public-by-default-even-public-all-is-not-set = []

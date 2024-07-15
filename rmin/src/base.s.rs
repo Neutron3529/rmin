@@ -58,19 +58,44 @@ pub struct Sexp<T: RType> {
 /// ReadOnly [`SEXP`], which might be missing.
 ///
 /// The only thing you could do is [`.into_option()`], which check the missingness and then convert it into a regular [`Sexp`] in case it is not missing.
+/// Currently, this is strongly discouraged since you cannot really send optional variable with registered routines.
 #[repr(transparent)]
+#[derive(Clone, Copy)]
 pub struct OptionSexp<T: RType> {
     sexp: Sexp<T>
 }
+impl<T: RType> Sexp<T> {
+    #[deprecated = "Sexp<T> cannot missing (while the item is registered), using OptionSexp<T> instead."]
+    pub unsafe fn missing(self)->bool {
+        false
+    }
+}
 impl<T: RType> OptionSexp<T> {
     /// Convert the `OptionSexp<T>` into `Option<Sexp<T>>` item.
+    /// should be unsafe since there is no guarateen whether the missing function could really being called.
     #[inline(always)]
-    pub fn into_option(self)->Option<Sexp<T>> {
-        if self.sexp.missing() {
+    pub unsafe fn into_option(self)->Option<Sexp<T>> {
+        if unsafe {self.missing()} {
             None
         } else {
             Some(self.sexp)
         }
+    }
+
+    /// indicate whether a sexp is missing, should call manually.
+    /// This function is not provided to [`Owned`] or [`Protected`], since they are allocated by Rust and should not missing.
+    #[inline(always)]
+    pub unsafe fn missing(&self) -> bool {
+        // only OptionSexp may missing.
+        // SAFETY: ffi.
+        self.missingness() != 0
+    }
+    /// wrapper for R `MISSING` function.
+    #[inline(always)]
+    pub unsafe fn missingness(&self) -> i32 {
+        // only Sexp may missing.
+        // SAFETY: ffi.
+        unsafe { self.sexp.sexp.missing() as i32 }
     }
 }
 /// Owned [`SEXP`], allocated by Rust code.
@@ -379,23 +404,6 @@ pub trait SExt: Sized {
                 )
             }
         }
-    }
-}
-impl<T: RType> Sexp<T> {
-    /// indicate whether a sexp is missing, should call manually.
-    /// This function is not provided to [`Owned`] or [`Protected`], since they are allocated by Rust and should not missing.
-    #[inline(always)]
-    pub fn missing(&self) -> bool {
-        // only Sexp may missing.
-        // SAFETY: ffi.
-        self.missingness() != 0
-    }
-    /// wrapper for R `MISSING` function.
-    #[inline(always)]
-    pub fn missingness(&self) -> i32 {
-        // only Sexp may missing.
-        // SAFETY: ffi.
-        unsafe { self.as_sexp().missing() as i32 }
     }
 }
 /// A marker suggeest whether the SEXP is mutable

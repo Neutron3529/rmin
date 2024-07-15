@@ -161,7 +161,9 @@ pub fn export(attr: TokenStream, item: TokenStream) -> TokenStream {
     let check = meta.param_check(" || ");
     let check_vals = meta.param_check(", ");
     let report = meta.param_check_report();
-    let safe_variant = if check.len() > 0 {
+    let safe_variant = if cfg!(not(feature = "force-symbol")) && check.len() > 0 {
+        // with routine registered, missing parameter is not allowed. thus there is no need to check parameters here again.
+        // currently safe and unsafe do the same things, but things could be changed in the future if some extra check should be done.
         format!(
             r#"
             if {check} {{
@@ -251,7 +253,11 @@ fn finalize(crate_name: String) -> TokenStream {
     const R_CALL_METHOD:&[R_CallMethodDef]=&[
 {saves}        R_CallMethodDef {{name: null(), fun: null(), numArgs: 0}}
     ];
-
+    // in case `lib{name}.so` is used.
+    #[no_mangle]
+    extern fn R_init_lib{name}(info:*mut DllInfo){{
+        R_init_{name}(info)
+    }}
     #[no_mangle]
     extern fn R_init_{name}(info:*mut DllInfo){{
         unsafe {{
@@ -263,13 +269,14 @@ fn finalize(crate_name: String) -> TokenStream {
                 null()
             );
             R_useDynamicSymbols(info, 0);
-            R_forceSymbols(info, 0); // change this to 1 will make most of the functions unsearchable, which is sad for people who want to compile in Rust and load in R directly.
+            R_forceSymbols(info, {forceSymbols}); // change this to 1 will make most of the functions unsearchable, which is sad for people who want to compile in Rust and load in R directly.
         }}
     }}
 }}"#,
         name = crate_name,
         saves = dlls,
         funcs = fns,
+        forceSymbols = if cfg!(feature = "force-symbol") {1} else {0},
         mod_name = "_please_do_not_use_rmin_export_interface_as_your_mod_name_",
         camel = if cfg!(feature = "camel-ass") {
             "\n"
@@ -287,7 +294,7 @@ fn finalize(crate_name: String) -> TokenStream {
         println!("Writting R wrappers to {dir}");
         use std::fs;
         use std::path::Path;
-        let path = Path::new(&dir);
+        let path = Path::new(&dir).join("R");
         if path.is_dir() {
             fs::write(
                 path.join(R_SCRIPT_NAME),
@@ -323,7 +330,7 @@ fn finalize(crate_name: String) -> TokenStream {
                 println!("warning: failed to write R wrapper file `{R_SCRIPT_NAME}`")
             });
         } else {
-            println!("Warning: environment variable $(R_SCRIPT_DIR) is set but the path `{dir}` is not a dir!")
+            println!("Warning: environment variable $(R_SCRIPT_DIR) is set but the path `{dir}/R` is not a dir!")
         }
     } else {
         println!(
