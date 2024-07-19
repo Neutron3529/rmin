@@ -250,6 +250,7 @@ pub trait SEXPext: Copy {
 
     /// get whether self is missing.
     /// it seems that, return 0 means the value is not missing, but I'm not sure.
+    /// It is really unsafe, the best practice is that, never rely on this feature.
     unsafe fn missing(self) -> c_int;
 
     /// get attr from SEXP
@@ -278,6 +279,7 @@ impl SEXPext for SEXP {
     unsafe fn len(self) -> R_xlen_t {
         unsafe { Rf_xlength(self) }
     }
+    /// REALLY UNSAFE
     #[inline(always)]
     unsafe fn missing(self) -> c_int {
         unsafe { MISSING(self) }

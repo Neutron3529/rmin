@@ -65,8 +65,10 @@ pub struct OptionSexp<T: RType> {
     sexp: Sexp<T>
 }
 impl<T: RType> Sexp<T> {
+    /// Sexp means the item is not missing, using [`OptionSexp<T>`] if the sexp is optional
+    /// (The best practice is, never use this!)
     #[deprecated = "Sexp<T> cannot missing (while the item is registered), using OptionSexp<T> instead."]
-    pub unsafe fn missing(self)->bool {
+    pub const unsafe fn missing(self)->bool {
         false
     }
 }

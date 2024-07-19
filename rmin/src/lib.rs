@@ -15,7 +15,7 @@ Please notice that, I am not familar with switching branches, the commit directl
 
 # Upcoming breaking changes in v0.4.3-pre0:
 
-- [x] Create an (unsafe) type [`OptionSexp`], since there is no guarateen makes `MISSING(a missing value)` in R returns non-zero (nor even returns, since the pointer may be invalid). Since with macro support, [`Sexp`] cannot missing,
+- [x] Create an (unsafe) type [`OptionSexp`], since there is no guarateen makes `MISSING(a missing value)` in R returns non-zero (nor even returns, since the pointer may be invalid). This is not a choice, since with macro support, [`Sexp`] cannot missing,
 - [x] unify the two entry with lib*.so and *.so in the macro: create both.
 
 
