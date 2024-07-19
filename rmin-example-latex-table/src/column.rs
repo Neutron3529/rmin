@@ -12,7 +12,8 @@ impl Columns {
         for item in s.chars() {
             match item {
                 '|' => verts.push(columns.len()),
-                'l' => columns.push(Column::new_align(ColumnAlign::Left)),
+                'L' => columns.push(Column::new_align(ColumnAlign::Left)),
+                'l' => columns.push(Column::new_align(ColumnAlign::LeftAlignWithRightElementPadding)),
                 'r' => columns.push(Column::new_align(ColumnAlign::Right)),
                 '%' => {
                     columns.last_mut().map(|x| x.ifn.as_percentage = true);
@@ -20,7 +21,7 @@ impl Columns {
                 ch @ '0'..='9' => {
                     columns
                         .last_mut()
-                        .map(|x| x.ifn.rounding = x.ifn.rounding * 10 + (ch as u8 - b'0') as u32);
+                        .map(|x| x.ifn.rounding = if x.ifn.rounding<0 {(ch as u8 - b'0') as i32} else {x.ifn.rounding * 10 + (ch as u8 - b'0') as i32});
                 }
                 _ => columns.push(Column::new_align(ColumnAlign::Center)), /*any other characters regarded as 'c'*/
             }
@@ -35,16 +36,31 @@ impl Columns {
     pub fn set_names(&mut self, names: impl Into<Vec<String>>) {
         self.names = names.into()
     }
-    pub fn set_roundings(&mut self, rounding: impl Into<u32>) {
+    pub fn set_roundings(&mut self, rounding: impl Into<i32>) {
         let rounding = rounding.into();
         for i in &mut self.columns {
             i.ifn.rounding = rounding;
         }
     }
+    pub fn apply_default_roundings(&mut self, rounding: impl Into<i32>) {
+        let rounding = rounding.into();
+        for i in &mut self.columns {
+            if i.ifn.rounding < 0 {
+                i.ifn.rounding = rounding;
+            }
+        }
+    }
+    pub fn apply_roundings(&mut self, roundings: impl Iterator<Item:Into<i32>>) {
+        self
+            .columns
+            .iter_mut()
+            .zip(roundings)
+            .for_each(|(x, y)| x.ifn.rounding = y.into())
+    }
     pub fn set_align(&mut self, index: impl Into<usize>, align: impl Into<ColumnAlign>) {
         self.columns[index.into()].align = align.into()
     }
-    pub fn set_rounding(&mut self, index: impl Into<usize>, rounding: impl Into<u32>) {
+    pub fn set_rounding(&mut self, index: impl Into<usize>, rounding: impl Into<i32>) {
         self.columns[index.into()].ifn.rounding = rounding.into()
     }
     pub fn set_as_percentage(&mut self, index: impl Into<usize>, as_percentage: impl Into<bool>) {
@@ -90,10 +106,12 @@ impl Column {
         Default::default()
     }
     pub fn new_align(align: ColumnAlign) -> Self {
-        Self {
+        let mut s = Self {
             align: align,
             ..Default::default()
-        }
+        };
+        s.ifn.rounding = -1;
+        s
     }
 }
 impl Display for Column {
@@ -103,28 +121,33 @@ impl Display for Column {
             "{}",
             match self.align {
                 ColumnAlign::Left => "l",
+                ColumnAlign::LeftAlignWithRightElementPadding => "l",
                 ColumnAlign::Center => "c",
                 ColumnAlign::Right => "r",
             }
         )
     }
 }
-#[derive(Default)]
+#[derive(Default, PartialEq)]
 pub enum ColumnAlign {
+    /// Leftmost, L
     Left,
+    /// normal left, l
+    /// for template row name with mutiple rows, padding "name" with "ll|" into "& names &" rather than "names &&"
+    LeftAlignWithRightElementPadding, 
     #[default]
     Center,
     Right,
 }
 #[derive(Default)]
 pub struct ItemFn {
-    pub rounding: u32,
+    pub rounding: i32,
     pub as_percentage: bool,
 }
 impl ItemFn {
     pub fn fmt(&self, mut item: Data<f64>, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.as_percentage {
-            item.rounding = (self.rounding as i32 - 2).max(0) as u32;
+            item.rounding = (self.rounding - 2).max(0);
             item.as_percentage = true
         } else {
             item.rounding = self.rounding;

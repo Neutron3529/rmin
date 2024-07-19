@@ -31,7 +31,7 @@
 #' @export LatexTableTemplate
 #' @exportClass LatexTableTemplate
 LatexTableTemplate <- setRefClass("LatexTableTemplate", fields = list(caption = "character", columns = "character", column_names = "character", roundings="integer", table_rules="character", top_rules="character", bottom_rules="character", footnotes="character", bold_fn = "function", italic_fn = "function", stars_fn = "function", use_threeparttable = "logical"), methods = list(
-    data = function(data, cap = character(0), hline=0L, cline = integer(0), row_name=character(0), columns=character(0), column_names=character(0), roundings = 4, table_rules = character(0), top_rules=character(0), bottom_rules = character(0), footnotes = character(0), use_threeparttable = FALSE){
+    data = function(data, cap = character(0), hline=0L, cline = integer(0), row_name=character(0), columns=character(0), column_names=character(0), roundings = 3L, table_rules = character(0), top_rules=character(0), bottom_rules = character(0), footnotes = character(0), use_threeparttable = FALSE){
         "display the latex format with the given data, use caption \\code{cap} and row_name \\code{row_name} if provided.\n \\code{hline} controls the location that \\\\hline command inserted in\n \\code{cline} has length 3*N, and cline[3*K+(1:3)] = c(a,b,c) where \\\\cline{b-c} will be inserted after a-th row is printed."
         if (missing(cap)) {
             cap=caption
@@ -104,6 +104,6 @@ LatexTableTemplate <- setRefClass("LatexTableTemplate", fields = list(caption = 
 #' @examples
 #' template <- lt:::rt("ccc%")
 #' template$data(matrix(1,2,3))
-rt <- function(col_fmt, name_col="l|", caption=character(0), columns = c(name_col, col_fmt), column_names = character(0), roundings=4L, table_rules = character(0), top_rules="\\toprules", bottom_rules = "\\bottom_rules", footnotes = character(0), bold_fn=function(x)NULL, italic_fn=function(x)NULL, stars_fn=function(x)NULL, use_threeparttable=F) {
+rt <- function(col_fmt, name_col="l|", caption=character(0), columns = c(name_col, col_fmt), column_names = character(0), roundings=3L, table_rules = character(0), top_rules="\\toprules", bottom_rules = "\\bottom_rules", footnotes = character(0), bold_fn=function(x)NULL, italic_fn=function(x)NULL, stars_fn=function(x)NULL, use_threeparttable=F) {
     LatexTableTemplate(caption=as.character(caption), columns = as.character(columns), column_names = as.character(column_names), roundings=as.integer(roundings), table_rules = as.character(table_rules), top_rules=as.character(top_rules), bottom_rules = as.character(bottom_rules), footnotes = as.character(footnotes), bold_fn=bold_fn, italic_fn=italic_fn, stars_fn=stars_fn, use_threeparttable = use_threeparttable)
 }

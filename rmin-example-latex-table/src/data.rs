@@ -3,17 +3,18 @@ use crate::{fmt, Display};
 #[derive(Default, Clone, Copy)]
 pub struct Data<T: Display + Default> {
     pub data: T,
-    pub rounding: u32,
+    pub rounding: i32,
     pub as_percentage: bool,
     pub as_bold: bool,
     pub as_italic: bool,
     pub use_threeparttable: bool,
-    pub stars: u32,
+    pub stars: i32,
 }
 impl Data<f64> {
     pub fn from<'a>(data: impl IntoIterator<Item = &'a f64>) -> Vec<Self> {
         Vec::from_iter(data.into_iter().map(|&x| Data {
             data: x,
+            rounding: -1,
             ..Default::default()
         }))
     }

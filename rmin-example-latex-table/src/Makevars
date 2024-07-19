@@ -20,7 +20,6 @@ $(STATLIB):
 	fi && \
 		export PATH="$(PATH):$(HOME)/.cargo/bin" && \
 		cargo build --lib --release --manifest-path=$(TARGET_DIR)/../Cargo.toml --target-dir $(TARGET_DIR) && \
-		rm -f $(R_SCRIPT_DIR)/aaa.rmin.Rust.Functions.R && mv $(TARGET_DIR)/../aaa.rmin.Rust.Functions.R $(R_SCRIPT_DIR) && \
 		cp $(STATLIB) $(SHLIB) && \
 	if [ "$(NOT_CRAN)" != "true" ]; then \
 		rm -Rf $(CARGOTMP) && \

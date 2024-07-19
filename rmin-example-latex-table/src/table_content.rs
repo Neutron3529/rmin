@@ -98,20 +98,24 @@ impl Display for TableContent {
                     }
                 }
                 if self.template_columns.columns.len() > 0 {
-                    if self.row_name[i].contains(r"\multicolumn") {
-                        write!(f, "\n        {} & ", self.row_name[i])?
+                    let colname = &self.row_name[i];
+                    if colname.contains(r"\multicolumn") {
+                        write!(f, "\n        {} & ", colname)?
                     } else {
-                        let colname = format!("\n        {} ", self.row_name[i]);
                         let less = colname.bytes().fold(
                             self.template_columns.columns.len() as i32,
                             |s, x| if x == b'&' { s - 1 } else { s },
                         );
                         if less < 0 {
-                            panic!("more & is provided")
+                            panic!("{} more `&`{s} is provided in colname {colname}",-less, s=if less==-1 {""} else {"s"})
                         } else if less == 0 {
-                            write!(f, "{colname}")?
+                            write!(f, "\n        {} ", self.row_name[i])?
                         } else {
-                            write!(f, "{colname} {:&>width$} ", "", width = less as usize)?
+                            if less>1 && self.template_columns.columns.first().map(|x|x.align!=crate::ColumnAlign::Left).unwrap_or(true){
+                                write!(f, "\n        {:&>width$} {colname} & ", "", width = (less-1) as usize)?
+                            } else {
+                                write!(f, "\n        {colname} {:&>width$} ", "", width = less as usize)?
+                            }
                         }
                     }
                 } else {

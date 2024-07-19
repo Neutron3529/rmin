@@ -78,14 +78,13 @@ fn _print(
     a.content.template_columns = Columns::header(&columns[0]);
     a.content.data_columns = Columns::header(&columns[1]);
     if roundings.len() == 1 {
-        a.content.data_columns.set_roundings(roundings[0] as u32);
+        a.content.data_columns.apply_default_roundings(roundings[0]);
     } else if roundings.len() == column_names.len() {
         a.content
             .data_columns
-            .columns
-            .iter_mut()
-            .zip(roundings.iter())
-            .for_each(|(x, &y)| x.ifn.rounding = y as u32)
+            .apply_roundings(roundings.iter().copied())
+    } else {
+        panic!("specific roundings does not equals to 1 or data columns")
     }
     a.content.data_columns.set_names(column_names);
 
@@ -114,7 +113,7 @@ fn _print(
         data.as_italic = item == 1
     });
     modify(&mut a, stars.data().iter(), |(data, &item)| {
-        data.stars = item as u32
+        data.stars = item
     });
     if let Some(&1) = use_threeparttable.data().get(0) {
         a.content
