@@ -114,15 +114,8 @@ extern "C" {
     pub fn Rf_getAttrib(item: SEXP, slot: SEXP) -> SEXP;
     pub fn Rf_setAttrib(item: SEXP, slot: SEXP, val: SEXP) -> SEXP;
     pub fn R_RegisterCFinalizer(s: SEXP, fun: extern "C" fn(SEXP) -> ());
-
-}
-#[cfg_attr(doc, doc(cfg(not(have_std))))]
-#[cfg(not(have_std))]
-#[link(name = "R", kind = "dylib")]
-#[cfg_attr(doc, doc(cfg(not(have_std))))]
-#[cfg(not(have_std))]
-extern "C" {
     pub fn Rprintf(arg1: *const c_char, ...);
+    pub fn REprintf(arg1: *const c_char, ...);
 }
 
 #[cfg_attr(doc, doc(cfg(not(have_std))))]

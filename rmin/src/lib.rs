@@ -276,12 +276,21 @@ pub mod prelude {
     pub use crate::base::s::r_type::alias::*;
 
     #[doc(inline)]
+    pub use crate::base::macros::*;
+
+    #[doc(inline)]
     #[cfg(not(have_std))]
     #[cfg_attr(doc, doc(cfg(not(have_std))))]
     pub use crate::base::no_std::{
-        macros::{format, println},
         Box, String, ToString, Vec,
     };
+
+    // #[cfg(have_std)]
+    // pub(crate) use std::{
+    //     boxed::Box,
+    //     string::{String, ToString},
+    //     vec::Vec
+    // };
 
     /// a simple (re-exported) module for R routines registration.
     #[cfg_attr(doc, doc(cfg(feature = "register-routines")))]

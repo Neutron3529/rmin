@@ -29,27 +29,6 @@ pub fn handle_panic<R, F: FnOnce() -> R>(f: F) -> R {
     unsafe {thing.error()}
 }
 
-
-
-/// Basic println for no_std mode.
-pub mod macros {
-    /// Print things into R
-    pub macro println ($($tt:tt)*) {{
-        let mut x=$crate::String::new();
-        core::fmt::write(&mut x, format_args!($($tt)*)).and_then(|_|::core::fmt::write(&mut x, format_args!("\n\0"))).expect("failed to write string");
-        #[allow(unused_unsafe)]
-        unsafe{ $crate::base::s::r_type::print(x.as_ptr()) }
-    }}
-
-    /// Print things into R
-    pub macro format ($($tt:tt)*) {{
-        let mut x=$crate::String::new();
-        core::fmt::write(&mut x, format_args!($($tt)*)).expect("failed to write string");
-        x
-    }}
-}
-
-
 /// Global allocator using R's allocator.
 pub struct SimpleAllocator();
 #[global_allocator]

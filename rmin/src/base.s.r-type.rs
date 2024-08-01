@@ -312,13 +312,16 @@ impl SEXPext for SEXP {
 pub unsafe fn error(message: *const Rchar) -> ! {
     unsafe { Rf_errorcall(lib_r::R_CurrentExpression, FMT, message as *const c_char) }
 }
-/// print function used in `no_std` mode, for `std` user, println! should be better.
-#[cfg_attr(doc, doc(cfg(not(have_std))))]
-#[cfg(not(have_std))]
+/// print function.
 pub unsafe fn print(message: *const Rchar) {
     // SAFETY: FMT is add to ensure the code is well-encoded
     unsafe { Rprintf(FMT, message as *const c_char) }
 }
+/// eprint function.
+pub unsafe fn eprint(message: *const Rchar) {
+    // SAFETY: FMT is add to ensure the code is well-encoded
+    unsafe { REprintf(FMT, message as *const c_char) }
+}
 
 /// formatter avoid %s being translated.
-pub const FMT: *const c_char = b"%s\0" as *const u8 as *const c_char;
+pub const FMT: *const c_char = c"%s".as_ptr();

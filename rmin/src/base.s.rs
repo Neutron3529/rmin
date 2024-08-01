@@ -14,8 +14,7 @@ use r_type::{
 
 #[cfg(doc)]
 use r_type::define::*;
-#[cfg(not(have_std))]
-use r_type::print; // for doc;
+use r_type::{print, eprint}; // for doc;
 /// impl Index and IndexMut for a type.
 pub mod macros {
     /// internal impl.
@@ -473,15 +472,17 @@ impl Sexp<Rchar> {
     pub unsafe fn error(self) -> ! {
         unsafe { error(Rchar::data(self.as_sexp())) }
     }
-    /// print the content to R... with R's print function. Only available in no_std mode
+    /// print the content to R... with R's print function.
     ///
-    /// For std user, Rust builtin [`println!`]() could be better.
-
-    #[cfg_attr(doc, doc(cfg(not(have_std))))]
-    #[cfg(not(have_std))]
+    /// It is more preferred than `std::println!` since output with `std::println!` might be ignored with windows `Rgui.exe`.
     pub fn print(self) {
         // SAFETY: ffi calls, the input type is Rchar with `\0` terminator, thus is OK.
         unsafe { print(Rchar::data(self.as_sexp())) }
+    }
+    /// print the content to R... with R's eprint function.
+    pub fn eprint(self) {
+        // SAFETY: ffi calls, the input type is Rchar with `\0` terminator, thus is OK.
+        unsafe { eprint(Rchar::data(self.as_sexp())) }
     }
 }
 
