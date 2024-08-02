@@ -1,5 +1,5 @@
 use crate::{R::Rchar, base::s::{Sexp, SExt, r_type::lib_r::{calloc, free, realloc, malloc}}};
-use super::macros::*;
+pub(crate) use super::macros::*;
 use core::{any::Any, ffi::c_void, fmt::{Debug, Display}, panic::PanicPayload};
 #[cfg(not(test))]
 use core::fmt::Write; // for panic panic_handler

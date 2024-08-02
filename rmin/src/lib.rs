@@ -168,10 +168,6 @@ export LOAD="dyn.load('target/release/examples/libcompare_rmin.so');addnp=getNat
     no_std
 )]
 #![cfg_attr(feature = "const_type_name", feature(const_type_name))]
-#![cfg_attr(
-    all(not(have_std), feature = "panic-info-message"),
-    feature(panic_info_message)
-)]
 #![feature(decl_macro)]
 #![cfg_attr(any(doc, test), feature(doc_cfg, rustdoc_missing_doc_code_examples))]
 #![warn(
