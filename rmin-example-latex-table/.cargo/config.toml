@@ -4,3 +4,5 @@ replace-with = "vendored-sources"
 [source.vendored-sources]
 directory = "vendor"
 
+[patch.crates-io]
+rmin = { path = "../rmin" }

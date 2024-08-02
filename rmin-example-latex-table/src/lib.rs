@@ -172,8 +172,8 @@ fn _print(
 
 #[cfg(test)]
 mod test {
-    use std::string::String;
     use crate::*;
+    use std::println; // since this is test, we do not load R environment
     #[test]
     fn main() {
         let mut a = Table::default();
@@ -194,7 +194,7 @@ mod test {
             "CP".to_string(),
         ]);
         a.content.data = Data::from(&vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]);
-        a.content.data_columns.set_roundings(4u32);
+        a.content.data_columns.set_roundings(4);
         a.content.row_name = vec!["& test".to_string()];
         println!("{a}")
     }
