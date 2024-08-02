@@ -44,7 +44,8 @@ pub mod no_std;
 /// Basic println for both std and no_std mode.
 /// this println is more preferred than the default one, since it could output capturable outputs in windows
 pub mod macros {
-    // pub(crate) use crate::String;
+    #[cfg(not(have_std))]
+    pub(crate) use crate::String;
     #[cfg(not(have_std))]
     macro fmt ($fn:tt, $($tt:tt)*) {{
         let mut x=String::new();

@@ -1,5 +1,6 @@
 use core::{intrinsics, any::Any, mem::ManuallyDrop};
 use super::Box;
+use crate::println;
 
 // extern crate unwind;
 // use unwind as uw;
@@ -12,10 +13,10 @@ extern crate rmin_eh;
 // pub extern "C" fn eh_personality(){super::println!("eh_personality called");}
 /// a function just make linker happy.
 #[cfg_attr(not(test), no_mangle)]
-pub extern "C" fn __rust_foreign_exception()->!{super::println!("__rust_foreign_exception called, abort.");core::intrinsics::abort()}
+pub extern "C" fn __rust_foreign_exception()->!{println!("__rust_foreign_exception called, abort.");core::intrinsics::abort()}
 /// a function just make linker happy.
 #[cfg_attr(not(test), no_mangle)]
-pub extern "C" fn __rust_drop_panic()->!{super::println!("__rust_drop_panic called, abort.");core::intrinsics::abort()}
+pub extern "C" fn __rust_drop_panic()->!{println!("__rust_drop_panic called, abort.");core::intrinsics::abort()}
 /// almost the same impl in std crate.
 pub unsafe fn catch_unwind<R, F: FnOnce() -> R>(f: F) -> Result<R, Box<dyn Any + Send>> {
     union Data<F, R> {
