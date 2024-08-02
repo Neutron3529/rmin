@@ -1,6 +1,6 @@
 [package]
 name = "rmin"
-version = "0.4.3-pre1"
+version = "0.4.3"
 edition = "2021"
 description = "A minimal Rust lib for writting R extensions"
 authors = ["Neutron3529 <qweytr1@main.ustc.edu.cn>"]

@@ -9,15 +9,15 @@ Since it is small enough, you could vendor this crate easily into your CRAN pack
 
 # Status
 
-The recent usable version is v0.3.1, DO NOT USE THE GIT VERSION
+The recent usable version is v0.4.3, DO NOT USE THE GIT VERSION
 
 Please notice that, I am not familar with switching branches, the commit directly into the main branch is highly untrustable. Github is a repo only
 
-# Upcoming breaking changes in v0.4.3-pre0:
+# Breaking changes in v0.4.3:
 
 - [x] Create an (unsafe) type [`OptionSexp`], since there is no guarateen makes `MISSING(a missing value)` in R returns non-zero (nor even returns, since the pointer may be invalid). This is not a choice, since with macro support, [`Sexp`] cannot missing,
 - [x] unify the two entry with lib*.so and *.so in the macro: create both.
-
+- [x] You should import with `use rmin::{*, println};` in std mode, otherwise an warning is generated. Since `std::println!` cannot output to Rgui.exe, override std::println with an explicit import is needed.
 
 # Upcoming breaking changes in v0.4.0:
 
@@ -118,7 +118,7 @@ In 0.3.0, feature `std` is optional again, which will give us a faster code gene
 ### grammar
 ```no_run
 #![no_std]
-use rmin::*;
+use rmin::{*, println};
 /// Return a+b to R.
 #[no_mangle]
 pub extern "C" fn add_protect(a:Sexp<f64>,b:Sexp<f64>) -> Owned<f64> {
@@ -144,6 +144,16 @@ pub extern "C" fn panic() -> Owned<f64> {
         panic!("error occurs")
     })
 }
+
+/// with macro
+/// macro will register this function, thus R will check whether all parameters are missing
+#[export]
+fn macro_will_expand_and_register_it(a:Sexp<f64>)->Owned<f64>{
+    let mut b=Owned::new(1);
+    b[0]=a.data().sum();
+}
+done!();// in case you're using macros, adding a done! is necessary, this done call generate the
+        // register routine, which will ensure the expanded code is checked.
 fn main() {} // just makes compiler happy
 ```
 

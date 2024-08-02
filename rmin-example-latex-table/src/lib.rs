@@ -17,7 +17,7 @@ pub use data::Data;
 mod table_content;
 pub use table_content::TableContent;
 
-use rmin::*;
+use rmin::{*, println};
 use std::{str, string::String};
 
 /// R example:
@@ -166,7 +166,7 @@ fn _print(
     );
 
     let out = a.to_string().replace('%', r"\%");
-    rmin::println!("{out}");
+    println!("{out}");
     Owned::raw_from_str(out.as_bytes())
 }
 
@@ -196,7 +196,7 @@ mod test {
         a.content.data = Data::from(&vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]);
         a.content.data_columns.set_roundings(4u32);
         a.content.row_name = vec!["& test".to_string()];
-        rmin::println!("{a}")
+        println!("{a}")
     }
 }
 done!();
