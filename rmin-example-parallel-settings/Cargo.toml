@@ -1,0 +1,12 @@
+[workspace]
+[lib]
+crate-type = ["cdylib"]
+
+[package]
+name = "PS"
+version = "0.0.1"
+edition = "2024"
+
+[dependencies]
+num_cpus = "1.16.0"
+rmin = { version = "0.4.3", default-features = false, features = ["busybox", "panic-info-message", "rmin-macros-verbose", "rmin-macros-warning", "rmin-macros-write-r-func-to-out-dir", "std"] }

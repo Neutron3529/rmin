@@ -1,0 +1,5 @@
+^LICENSE\.md$
+^target$
+^.*\.so$
+^.*\.dll$
+^src/\.cargo$

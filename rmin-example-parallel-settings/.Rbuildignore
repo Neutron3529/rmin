@@ -1,0 +1,6 @@
+^LICENSE\.md$
+^pack\.sh$
+^target$
+^.*\.so$
+^.*\.dll$
+^src/\.cargo$

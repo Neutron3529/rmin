@@ -1,0 +1,23 @@
+[lib]
+proc-macro = true
+
+[package]
+name = "rmin-macros"
+version = "0.0.7"
+edition = "2021"
+description = "A minimal Rust lib for writting R extensions"
+authors = ["Neutron3529 <qweytr1@main.ustc.edu.cn>"]
+license = "AGPL-3.0"
+repository = "https://github.com/Neutron3529/rmin"
+
+[features]
+std = []
+no-std = []
+camel-ass = []
+warning-on-empty-sig = []
+verbose-output = []
+write-r-func-to-out-dir = []
+force-symbol = []
+
+[dependencies]
+

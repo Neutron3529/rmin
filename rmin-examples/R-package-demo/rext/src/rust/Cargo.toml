@@ -1,0 +1,11 @@
+[workspace]
+[lib]
+crate-type = ['cdylib']
+
+[package]
+name = "rext"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rmin = { version = "0.5.0-pre", path = "../../../../../../rmin/rmin", features = ["rmin-macros-verbose", "rmin-macros-write-r-func-to-out-dir"] }

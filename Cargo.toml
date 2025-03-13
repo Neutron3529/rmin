@@ -1,0 +1,3 @@
+[workspace]
+members = ["rmin", "rmin-eh", "rmin-examples", "rmin-macros"]
+resolver = "2"

@@ -1,0 +1,4 @@
+^LICENSE\.md$
+^src/rust/target$
+^src/.*\.so$
+^src/\.cargo$

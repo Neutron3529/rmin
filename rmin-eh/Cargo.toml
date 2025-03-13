@@ -1,0 +1,13 @@
+[lib]
+path = "src/mod.rs"
+[package]
+name = "rmin-eh"
+version = "0.0.1"
+edition = "2021"
+description = "A minimal Rust lib for writting R extensions. Here is some fragments from std crate that provide a `eh_personality` lang-item. If you have another better `eh_personality` lang-item, just use a [patch] section to override this crate should cause no error. The only contribution of mine is change crate:: prefix to core::."
+authors = ["Neutron3529 <qweytr1@main.ustc.edu.cn>", "Rust Team <council@rust-lang.org>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Neutron3529/rmin"
+
+[dependencies]
+cfg-if = "1.0.0"

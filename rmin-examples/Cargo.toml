@@ -1,0 +1,19 @@
+[lib]
+crate-type = ["cdylib"]
+
+[package]
+name = "rmin-examples"
+version = "0.0.1"
+edition = "2021"
+description = "A minimal Rust lib for writting R extensions. Here are some useful examples."
+authors = ["Neutron3529 <qweytr1@main.ustc.edu.cn>"]
+license = "AGPL-3.0"
+repository = "https://github.com/Neutron3529/rmin"
+
+
+[features]
+default = ["no_std", "rmin/rmin-macros-write-r-func-to-out-dir"]
+no_std = ["rmin/core"]
+
+[dependencies]
+rmin = { version = "0.4.3-pre", path = "../rmin", features = ["rmin-macros-verbose", "busybox"], default-features = false }

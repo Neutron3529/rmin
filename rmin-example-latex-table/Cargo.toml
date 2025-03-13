@@ -1,0 +1,11 @@
+[workspace]
+[lib]
+crate-type = ["cdylib"]
+
+[package]
+name = "lt"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+rmin = { version = "0.4.3", default-features = false, features = ["busybox", "panic-info-message", "rmin-macros-verbose", "rmin-macros-warning", "rmin-macros-write-r-func-to-out-dir", "std"] }
