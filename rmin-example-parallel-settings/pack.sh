@@ -88,9 +88,9 @@ EOF
 
 cargo check # generate aaa.rmin.Rust.Functions.R
 R -s -e "cat('try generating documents\n');try(roxygen2::roxygenize('.'));cat('documents generating done.\n')"
-cd ..
 if R CMD check $DIR ; then
     echo pack.sh: check passed.
+    rm -rf $DIR.Rcheck
     if R CMD build $DIR ; then
         if [ x"$1" == x"noclean" ] ; then
             echo build done, execute \`./pack.sh clean\` to remove extra files.
