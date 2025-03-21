@@ -18,11 +18,11 @@ CORES = PHYSICAL_CORES
 #' @export
 #' @title wrapper of mclapply
 #' @returns see parallel::mclapply
-mclapply=function(mc.cores = PS::CORES, mc.preschedule = FALSE,...)parallel::mclapply(mc.cores = mc.cores, mc.preschedule = mc.preschedule, ...)
+mclapply=function(..., mc.cores = PS::CORES, mc.preschedule = FALSE)parallel::mclapply(mc.cores = mc.cores, mc.preschedule = mc.preschedule, ...)
 #' @export
 #' @title wrapper of mcmapply
 #' @returns see parallel::mcmapply
-mcmapply=function(mc.cores = PS::CORES, mc.preschedule = FALSE,...)parallel::mcmapply(mc.cores = mc.cores, mc.preschedule = mc.preschedule, ...)
+mcmapply=function(..., mc.cores = PS::CORES, mc.preschedule = FALSE)parallel::mcmapply(mc.cores = mc.cores, mc.preschedule = mc.preschedule, ...)
 
 
 .onLoad=function(libname, pkgname) {

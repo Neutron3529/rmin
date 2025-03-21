@@ -5,7 +5,7 @@ Author:
     person("Feiyue", "Xie", , "qweytr1@mail.ustc.edu.cn", role = c("aut", "cre"))
 Maintainer: Feiyue Xie <qweytr1@mail.ustc.edu.cn>
 Description: This package provide a wrapper for setting parallel threads (with openblas).
-Depends: parallel
+Imports: parallel
 License: AGPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
